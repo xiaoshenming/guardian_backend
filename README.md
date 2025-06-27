@@ -7,7 +7,7 @@
 -- -- 刷新权限，使更改立即生效
 -- FLUSH PRIVILEGES;
 
--- 创建名为DriveGo的数据库（如果不存在）
+-- 创建名为guardian的数据库（如果不存在）
 CREATE DATABASE IF NOT EXISTS guardian CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------------------------------
@@ -71,41 +71,184 @@ CREATE TABLE `user_profile` (
   INDEX `idx_email_profile`(`email`) USING BTREE
 ) ENGINE=InnoDB AUTO_INCREMENT=10001 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='用户详细资料表' ROW_FORMAT=DYNAMIC;
 
+-- ----------------------------
+-- 3. 守护圈信息表 (guardian_circle)
+-- ----------------------------
+DROP TABLE IF EXISTS `guardian_circle`;
+CREATE TABLE `guardian_circle` (
+  `id` INT AUTO_INCREMENT COMMENT '守护圈唯一ID (由PRIMARY KEY保证其非空和唯一)',
+  `circle_name` VARCHAR(255) NULL COMMENT '守护圈名称 (例如: "爷爷奶奶家")',
+  `creator_uid` INT NULL COMMENT '创建该圈子的用户ID (对应 user_profile.id)',
+  `circle_code` VARCHAR(255) NULL COMMENT '圈子邀请码，用于分享和加入',
+  `description` VARCHAR(1024) NULL COMMENT '守护圈描述，如地址、注意事项等',
+  `create_time` DATETIME NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` DATETIME NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_creator_uid`(`creator_uid`) USING BTREE,
+  INDEX `idx_circle_code`(`circle_code`) USING BTREE
+) ENGINE=InnoDB COMMENT='守护圈信息表';
 
+-- ----------------------------
+-- 4. 守护圈成员关系表 (circle_member_map)
+-- ----------------------------
+DROP TABLE IF EXISTS `circle_member_map`;
+CREATE TABLE `circle_member_map` (
+  `id` INT AUTO_INCREMENT COMMENT '关系ID (由PRIMARY KEY保证其非空和唯一)',
+  `circle_id` INT NULL COMMENT '守护圈ID (对应 guardian_circle.id)',
+  `uid` INT NULL COMMENT '用户ID (对应 user_profile.id)',
+  `member_role` TINYINT NULL DEFAULT 1 COMMENT '成员角色 (0:圈主/管理员, 1:普通成员/监护人, 2:被关怀者)',
+  `member_alias` VARCHAR(255) NULL COMMENT '成员在圈内的昵称',
+  `alert_level` TINYINT NULL DEFAULT 1 COMMENT '接收告警级别 (1:所有, 2:高危, 0:不接收)',
+  `create_time` DATETIME NULL DEFAULT CURRENT_TIMESTAMP COMMENT '加入时间',
+  `update_time` DATETIME NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_circle_id`(`circle_id`) USING BTREE,
+  INDEX `idx_uid_member`(`uid`) USING BTREE
+) ENGINE=InnoDB COMMENT='守护圈成员关系表 ';
 
+-- ----------------------------
+-- 5. 设备信息表 (device_info)
+-- ----------------------------
+DROP TABLE IF EXISTS `device_info`;
+CREATE TABLE `device_info` (
+  `id` INT AUTO_INCREMENT COMMENT '设备ID (由PRIMARY KEY保证其非空和唯一)',
+  `device_sn` VARCHAR(255) NULL COMMENT '设备唯一序列号 (SN)',
+  `device_name` VARCHAR(255) NULL COMMENT '设备自定义名称',
+  `device_model` VARCHAR(255) NULL DEFAULT 'Hi3516' COMMENT '设备型号',
+  `circle_id` INT NULL COMMENT '绑定的守护圈ID (对应 guardian_circle.id)',
+  `bound_by_uid` INT NULL COMMENT '执行绑定操作的用户ID',
+  `device_status` TINYINT NULL DEFAULT 0 COMMENT '设备状态 (0:未激活, 1:在线, 2:离线, 3:故障)',
+  `firmware_version` VARCHAR(100) NULL COMMENT '固件版本号',
+  `config` JSON NULL COMMENT '设备专属配置(JSON格式)，如灵敏度、检测区域等',
+  `last_heartbeat` DATETIME NULL COMMENT '设备最后心跳时间',
+  `create_time` DATETIME NULL DEFAULT CURRENT_TIMESTAMP COMMENT '绑定时间',
+  `update_time` DATETIME NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_device_sn`(`device_sn`) USING BTREE,
+  INDEX `idx_circle_id_device`(`circle_id`) USING BTREE
+) ENGINE=InnoDB COMMENT='硬件设备信息表 ';
 
+-- ----------------------------
+-- 6. 事件日志表 (event_log)
+-- ----------------------------
+DROP TABLE IF EXISTS `event_log`;
+CREATE TABLE `event_log` (
+  `id` BIGINT AUTO_INCREMENT COMMENT '事件日志ID (由PRIMARY KEY保证其非空和唯一)',
+  `device_id` INT NULL COMMENT '上报事件的设备ID (对应 device_info.id)',
+  `circle_id` INT NULL COMMENT '事件发生的守护圈ID',
+  `event_type` VARCHAR(100) NULL COMMENT '事件类型 (如: fall_detection, gesture_wave)',
+  `event_data` JSON NULL COMMENT '事件相关数据 (JSON格式)，如截图URL、置信度',
+  `event_time` DATETIME NULL COMMENT '事件实际发生时间 (由设备上报)',
+  `create_time` DATETIME NULL DEFAULT CURRENT_TIMESTAMP COMMENT '记录入库时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_device_id`(`device_id`) USING BTREE,
+  INDEX `idx_event_type`(`event_type`) USING BTREE,
+  INDEX `idx_event_time`(`event_time`) USING BTREE
+) ENGINE=InnoDB COMMENT='所有设备上报的原始事件日志表 ';
 
-以上是我的数据库结构，现在我要求你先完成登录注册的任务。要求能用上我现在给你搭建好的地基。去实现登录注册的功能。并且给出分别四级鉴权的测试接口。
+-- ----------------------------
+-- 7. 告警记录表 (alert_log)
+-- ----------------------------
+DROP TABLE IF EXISTS `alert_log`;
+CREATE TABLE `alert_log` (
+  `id` BIGINT AUTO_INCREMENT COMMENT '告警ID (由PRIMARY KEY保证其非空和唯一)',
+  `event_id` BIGINT NULL COMMENT '关联的原始事件ID (对应 event_log.id)',
+  `circle_id` INT NULL COMMENT '告警所属的守护圈ID',
+  `alert_level` TINYINT NULL COMMENT '告警级别 (1:紧急, 2:重要, 3:普通)',
+  `alert_content` VARCHAR(1024) NULL COMMENT '告警内容摘要',
+  `status` TINYINT NULL DEFAULT 0 COMMENT '处理状态 (0:待处理, 1:已通知, 2:已确认, 3:已忽略)',
+  `acknowledged_by_uid` INT NULL COMMENT '确认或处理该告警的用户ID',
+  `acknowledged_time` DATETIME NULL COMMENT '告警被确认或处理的时间',
+  `create_time` DATETIME NULL DEFAULT CURRENT_TIMESTAMP COMMENT '告警生成时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_event_id`(`event_id`) USING BTREE,
+  INDEX `idx_circle_id_alert`(`circle_id`, `status`) USING BTREE
+) ENGINE=InnoDB COMMENT='需要人工干预的告警通知记录表 ';
 
-登录接口 /api/auth/login  name/phone/email password deviceType(一般是web)
-注册接口 /api/auth/register 邮箱跟用户名密码是必填，其他的都可以后期补充。 name/email password code(邮箱接口的验证码)
-退出接口 /api/auth/logout  headers里面 Authorization: Bearer xxxxxxxxx ; deviceType:web (一般是web) 
-忘记密码接口 /api/auth/forget  email password code(邮箱接口的验证码)
-发送验证码接口 /api/auth/sendCode  email(必填) type(1:注册 2:忘记密码)
+-- ----------------------------
+-- 8. 自动化规则表 (action_rule)
+-- ----------------------------
+DROP TABLE IF EXISTS `action_rule`;
+CREATE TABLE `action_rule` (
+  `id` INT AUTO_INCREMENT COMMENT '规则ID (由PRIMARY KEY保证其非空和唯一)',
+  `rule_name` VARCHAR(255) NULL COMMENT '规则名称 (例如: "挥手开客厅灯")',
+  `circle_id` INT NULL COMMENT '规则所属的守护圈ID',
+  `trigger_device_id` INT NULL COMMENT '触发规则的设备ID (为空则代表圈内任意设备)',
+  `trigger_event_type` VARCHAR(100) NULL COMMENT '触发事件类型 (如: gesture_wave)',
+  `condition_logic` JSON NULL COMMENT '复杂条件逻辑 (JSON格式)',
+  `action_type` VARCHAR(100) NULL COMMENT '执行动作类型 (如: send_sms, call_api)',
+  `action_params` JSON NULL COMMENT '动作所需参数 (JSON格式)',
+  `is_enabled` TINYINT NULL DEFAULT 1 COMMENT '是否启用该规则 (1:启用, 0:禁用)',
+  `create_time` DATETIME NULL DEFAULT CURRENT_TIMESTAMP COMMENT '规则创建时间',
+  `update_time` DATETIME NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '规则更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_circle_id_rule`(`circle_id`, `is_enabled`) USING BTREE
+) ENGINE=InnoDB COMMENT='事件-动作自动化规则配置表 ';
 
-具体流程就是，用户输入邮箱跟密码注册，先调用发送验证码接口发送验证码（目前为空方法，发送逻辑以后再写，目前是存redis ，读取.env文件的REDIS_FOLDER=guardian，将验证码存入guardian/Verification_code下，存储格式为code_${email}_${type}）有效期五分钟,并且会查找数据库校验此邮箱是否被注册。然后用户调用注册接口，完成注册。接着用户登录，输入任意的name/phone/email 与准确的密码，和deviceType:web (一般是web)。 来实现登录。登录之后回参为jwt数据。(后端将用户的登录信息及其jwt存在redis里面，guardian/user下,格式为user_${userId}/${deviceType}_token，此处的userId为鉴权表的id，举例：在guardian/user目录下的 user_1目录下的web_xxxxxxxxxxxxxxxx，最多登录五个（设备/人）。)接下来前端会把jwt放在请求头里面调用个人信息接口去实现其他功能。鉴权中间件改为能识别guardian/user这种格式下的鉴权信息。并且后端的模块化全为一个路由类，一个方法类。app.js调用只需要调用路由即可。
+-- ----------------------------
+-- 9. 智能家居设备表 (smart_home_device)
+-- ----------------------------
+DROP TABLE IF EXISTS `smart_home_device`;
+CREATE TABLE `smart_home_device` (
+  `id` INT AUTO_INCREMENT COMMENT '智能设备ID (由PRIMARY KEY保证其非空和唯一)',
+  `device_name` VARCHAR(255) NULL COMMENT '设备名称 (如: "客厅顶灯")',
+  `circle_id` INT NULL COMMENT '所属守护圈ID',
+  `protocol` VARCHAR(100) NULL COMMENT '控制协议 (如: Zigbee, Wi-Fi, Matter)',
+  `api_endpoint` VARCHAR(1024) NULL COMMENT '控制该设备的API端点或MQTT主题',
+  `status` VARCHAR(100) NULL COMMENT '设备当前状态 (JSON格式)',
+  `create_time` DATETIME NULL DEFAULT CURRENT_TIMESTAMP COMMENT '添加时间',
+  `update_time` DATETIME NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_circle_id_smarthome`(`circle_id`) USING BTREE
+) ENGINE=InnoDB COMMENT='集成的第三方智能家居设备列表 ';
 
+以上数据库是我已经实现并且运用的结果，你只需要实现代码的逻辑跟功能就好，数据库不用你操心。
 
-个人信息接口 /api/user/info 请求头 Authorization: Bearer xxxxxxxxx ; deviceType:web 
-响应
+# Guardian 智能守护系统 - 数据库设计说明
+
+## 系统概述
+
+以上是Guardian智能守护系统的完整数据库设计。该系统是一个基于物联网技术的智能守护平台，专为老年人和需要特殊关怀的人群设计。
+
+## 技术架构
+
+```
+鸿蒙设备(Hi3516) → MQTT服务器 → Node.js后端 → Vben前端/鸿蒙App
+```
+
+## 核心功能
+
+- **手势识别**: 通过摄像头识别手势，触发智能家居控制
+- **跌倒检测**: 实时监控异常行为，及时发送告警
+- **智能联动**: 与智能家居设备无缝集成
+- **实时通知**: 向监护人手机发送重要信息
+
+## 权限体系
+
+1. **一级权限**: 普通用户（客户）- 基础功能使用
+2. **二级权限**: 管理员（公司管理层）- 数据管理和审查
+3. **三级权限**: 超级管理员 - 服务器数据和系统管理
+
+## API规范
+
+### 请求格式
+- 请求体: JSON格式
+- 认证头: `Authorization: Bearer <token>`
+- 设备类型: `deviceType: web`
+
+### 响应格式
+```json
 {
     "code": 200,
-    "data": {
-       各个数据（除隐私数据）
-    },
+    "data": {},
     "error": null,
     "message": "ok"
 }
+```
 
+## 扩展计划
 
-
-几乎所有接口均为raw的json负载。然后请求头用Authorization: Bearer xxxxxxxxx ; deviceType:web (一般是web) 来鉴权。
-所有接口响应遵循以下格式
-{
-    "code": 200,
-    "data": {
-       
-    },
-    "error": null,
-    "message": "ok"
-}
+- 微信小程序端
+- 更多智能设备接入
+- AI算法优化
+- 云端数据分析

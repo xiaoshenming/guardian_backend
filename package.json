@@ -3,7 +3,10 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
     "serve": "nodemon app.js",
+    "init-db": "mysql -u root -p < config/database.sql",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
@@ -21,5 +24,12 @@
     "mysql2": "^3.14.1",
     "nodemailer": "^7.0.3",
     "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
   }
 }
