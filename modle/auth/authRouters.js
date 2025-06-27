@@ -32,7 +32,7 @@ router.get("/codes", authorize([1, 2, 3]), async (req, res) => {
     
     switch(userRole) {
       case 1: // 普通用户
-        accessCodes = ['AC_100100', 'AC_100110', 'AC_100120', 'AC_100010'];
+        accessCodes = ['AC_100100', 'AC_100110'];
         break;
       case 2: // 管理员
         accessCodes = ['AC_100100', 'AC_100110', 'AC_100120'];
