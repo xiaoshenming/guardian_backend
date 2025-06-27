@@ -14,7 +14,7 @@ const sendCodeLimiter = rateLimit({
   });
 
 // 验证码生成接口
-router.post("/send-verification-code", sendCodeLimiter, async (req, res) => {
+router.post("/sendCode", sendCodeLimiter, async (req, res) => {
   const { email } = req.body;
 
   if (!email) {
