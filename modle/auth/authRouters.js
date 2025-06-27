@@ -21,7 +21,44 @@ const registerLimiter = rateLimit({
   max: 3,
   message: { code: 429, message: '注册尝试过于频繁，请稍后再试！', data: null, error: null },
 });
-
+// 在 authRouters.js 中添加
+router.get("/codes", authorize([1, 2, 3]), async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userRole = req.user.role;
+    
+    // 根据用户角色返回对应的权限码
+    let accessCodes = [];
+    
+    switch(userRole) {
+      case 1: // 普通用户
+        accessCodes = ['user:read', 'profile:edit'];
+        break;
+      case 2: // 管理员
+        accessCodes = ['user:read', 'user:write', 'admin:read'];
+        break;
+      case 3: // 超级管理员
+        accessCodes = ['*']; // 所有权限
+        break;
+      default:
+        accessCodes = [];
+    }
+    
+    res.json({
+      code: 200,
+      message: '获取权限码成功',
+      data: accessCodes,
+      error: null
+    });
+  } catch (error) {
+    res.status(500).json({
+      code: 500,
+      message: '获取权限码失败',
+      data: null,
+      error: error.message
+    });
+  }
+});
 // 登录接口
 router.post("/login", loginLimiter, async (req, res) => {
   try {
