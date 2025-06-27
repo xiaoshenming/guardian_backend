@@ -32,13 +32,13 @@ router.get("/codes", authorize([1, 2, 3]), async (req, res) => {
     
     switch(userRole) {
       case 1: // 普通用户
-        accessCodes = ['user:read', 'profile:edit'];
+        accessCodes = ['AC_100100', 'AC_100110', 'AC_100120', 'AC_100010'];
         break;
       case 2: // 管理员
-        accessCodes = ['user:read', 'user:write', 'admin:read'];
+        accessCodes = ['AC_100100', 'AC_100110', 'AC_100120'];
         break;
       case 3: // 超级管理员
-        accessCodes = ['*']; // 所有权限
+        accessCodes = ['AC_100100', 'AC_100110', 'AC_100120', 'AC_100010']; // 所有权限
         break;
       default:
         accessCodes = [];
@@ -46,7 +46,7 @@ router.get("/codes", authorize([1, 2, 3]), async (req, res) => {
     
     res.json({
       code: 200,
-      message: '获取权限码成功',
+      message: 'ok',
       data: accessCodes,
       error: null
     });
