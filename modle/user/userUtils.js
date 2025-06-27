@@ -3,7 +3,6 @@ const db = require("../../config/db"); // 您的 db.js
 const redis = require("../../config/redis"); // 您的 redis.js
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-// const { getOpenid } = require("../wx/getOpenid"); // 假设您有此工具函数
 require("dotenv").config();
 
 const secret = process.env.JWT_SECRET;
