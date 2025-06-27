@@ -83,7 +83,7 @@ CREATE TABLE `user_profile` (
 忘记密码接口 /api/auth/forget  email password code(邮箱接口的验证码)
 发送验证码接口 /api/auth/sendCode  email(必填) type(1:注册 2:忘记密码)
 
-具体流程就是，用户输入邮箱跟密码注册，先调用发送验证码接口发送验证码（目前为空方法，发送逻辑以后再写，目前是存redis ，读取.env文件的REDIS_FOLDER=guardian，将验证码存入guardian/Verification_code下，存储格式为code_${email}_${type}）有效期五分钟,并且会查找数据库校验此邮箱是否被注册。然后用户调用注册接口，完成注册。接着用户登录，输入任意的name/phone/email 与准确的密码，和deviceType:web (一般是web)。 来实现登录。登录之后回参为jwt数据。(后端将用户的登录信息及其jwt存在redis里面，guardian/user下,格式为user_${userId}/${deviceType}_token，此处的userId为鉴权表的id，举例：在guardian/user目录下的 user_1目录下的web_xxxxxxxxxxxxxxxx)接下来前端会把jwt放在请求头里面调用个人信息接口去实现其他功能。鉴权中间件改为能识别guardian/user这种格式下的鉴权信息。并且后端的模块化全为一个路由类，一个方法类。app.js调用只需要调用路由即可。
+具体流程就是，用户输入邮箱跟密码注册，先调用发送验证码接口发送验证码（目前为空方法，发送逻辑以后再写，目前是存redis ，读取.env文件的REDIS_FOLDER=guardian，将验证码存入guardian/Verification_code下，存储格式为code_${email}_${type}）有效期五分钟,并且会查找数据库校验此邮箱是否被注册。然后用户调用注册接口，完成注册。接着用户登录，输入任意的name/phone/email 与准确的密码，和deviceType:web (一般是web)。 来实现登录。登录之后回参为jwt数据。(后端将用户的登录信息及其jwt存在redis里面，guardian/user下,格式为user_${userId}/${deviceType}_token，此处的userId为鉴权表的id，举例：在guardian/user目录下的 user_1目录下的web_xxxxxxxxxxxxxxxx，最多登录五个（设备/人）。)接下来前端会把jwt放在请求头里面调用个人信息接口去实现其他功能。鉴权中间件改为能识别guardian/user这种格式下的鉴权信息。并且后端的模块化全为一个路由类，一个方法类。app.js调用只需要调用路由即可。
 
 
 个人信息接口 /api/user/info 请求头 Authorization: Bearer xxxxxxxxx ; deviceType:web 

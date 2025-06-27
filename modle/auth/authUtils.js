@@ -4,9 +4,10 @@ const redis = require('../../config/redis');
 require('dotenv').config();
 const secret = process.env.JWT_SECRET;
 
-// 定义一个辅助函数，用来检查 Redis 中的 JWT
+// 定义一个辅助函数，用来检查 Redis 中的 JWT (新格式)
 async function checkJWTInRedis(userId, token, deviceType) {
-    const storedToken = await redis.get(`user_${userId}_${deviceType}_token`);
+    const redisKey = `guardian:user:user_${userId}:${deviceType}_token`;
+    const storedToken = await redis.get(redisKey);
     return storedToken === token;
 }
 
@@ -42,7 +43,8 @@ function authorize(roles = []) {
                 });
             }
             // 重置 token 在 Redis 中的有效期到 3600 秒
-            await redis.expire(`user_${decoded.id}_${deviceType}_token`, 3600);
+            const redisKey = `guardian:user:user_${decoded.id}:${deviceType}_token`;
+            await redis.expire(redisKey, 3600);
 
             console.log('用户角色：', decoded.role);
             if (roles.length && !roles.includes(decoded.role)) {

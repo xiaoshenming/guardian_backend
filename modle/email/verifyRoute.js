@@ -15,7 +15,7 @@ const sendCodeLimiter = rateLimit({
 
 // 验证码生成接口
 router.post("/sendCode", sendCodeLimiter, async (req, res) => {
-  const { email } = req.body;
+  const { email, type = 1 } = req.body;
 
   if (!email) {
     return res
@@ -23,13 +23,42 @@ router.post("/sendCode", sendCodeLimiter, async (req, res) => {
       .json({ code: 400, message: "邮箱地址不能为空", data: null });
   }
 
+  // 验证type参数
+  if (![1, 2].includes(type)) {
+    return res
+      .status(400)
+      .json({ code: 400, message: "type参数错误，1:注册 2:忘记密码", data: null });
+  }
+
   try {
+    // 如果是注册类型，检查邮箱是否已被注册
+    if (type === 1) {
+      const checkEmailQuery = 'SELECT id FROM login_verification WHERE email = ?';
+      const [existingUser] = await new Promise((resolve, reject) => {
+        db.query(checkEmailQuery, [email], (err, results) => {
+          if (err) reject(err);
+          else resolve([results]);
+        });
+      });
+      
+      if (existingUser.length > 0) {
+        return res.status(400).json({
+          code: 400,
+          message: "该邮箱已被注册",
+          data: null
+        });
+      }
+    }
+
     const { success, verificationCode, error } = await sendVerificationCode(
-      email
+      email,
+      type
     );
 
     if (success) {
-      redis.set(`code_${email}`, verificationCode, "EX", 10 * 60); // 设置验证码过期时间为 10 分钟
+      // 按照要求的格式存储：guardian/Verification_code/code_${email}_${type}
+      const redisKey = `guardian:Verification_code:code_${email}_${type}`;
+      await redis.set(redisKey, verificationCode, "EX", 5 * 60); // 设置验证码过期时间为 5 分钟
 
       res.json({
         code: 200,
