@@ -38,7 +38,8 @@ app.get("/", (req, res) => {
         user: "/api/user",
         email: "/api/email"
       }
-    }
+    },
+    error: null
   });
 });
 
@@ -47,7 +48,8 @@ app.use("*", (req, res) => {
   res.status(404).json({
     code: 404,
     message: "接口不存在",
-    data: null
+    data: null,
+    error: null
   });
 });
 
@@ -57,7 +59,8 @@ app.use((err, req, res, next) => {
   res.status(500).json({
     code: 500,
     message: "服务器内部错误",
-    data: null
+    data: null,
+    error: null
   });
 });
 

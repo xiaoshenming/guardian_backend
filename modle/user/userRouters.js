@@ -16,7 +16,8 @@ router.get("/info", authorize(), async (req, res) => {
       return res.status(404).json({
         code: 404,
         message: "用户不存在",
-        data: null
+        data: null,
+        error: null
       });
     }
 
@@ -26,7 +27,8 @@ router.get("/info", authorize(), async (req, res) => {
       return res.status(404).json({
         code: 404,
         message: "用户资料不存在",
-        data: null
+        data: null,
+        error: null
       });
     }
 
@@ -48,7 +50,8 @@ router.get("/info", authorize(), async (req, res) => {
     res.json({
       code: 200,
       message: "获取用户信息成功",
-      data: userInfo
+      data: userInfo,
+      error: null
     });
 
   } catch (error) {
@@ -56,7 +59,8 @@ router.get("/info", authorize(), async (req, res) => {
     res.status(500).json({
       code: 500,
       message: "服务器内部错误",
-      data: null
+      data: null,
+      error: null
     });
   }
 });
@@ -72,7 +76,8 @@ router.get("/test/no-permission", authorize([0]), async (req, res) => {
       userRole: req.user.role,
       requiredRoles: [0],
       description: "此接口仅允许角色为0（无权限）的用户访问"
-    }
+    },
+    error: null
   });
 });
 
@@ -85,7 +90,8 @@ router.get("/test/normal-user", authorize([1]), async (req, res) => {
       userRole: req.user.role,
       requiredRoles: [1],
       description: "此接口仅允许角色为1（普通用户）的用户访问"
-    }
+    },
+    error: null
   });
 });
 
@@ -98,7 +104,8 @@ router.get("/test/admin", authorize([2]), async (req, res) => {
       userRole: req.user.role,
       requiredRoles: [2],
       description: "此接口仅允许角色为2（管理员）的用户访问"
-    }
+    },
+    error: null
   });
 });
 
@@ -111,7 +118,8 @@ router.get("/test/super-admin", authorize([3]), async (req, res) => {
       userRole: req.user.role,
       requiredRoles: [3],
       description: "此接口仅允许角色为3（超级管理员）的用户访问"
-    }
+    },
+    error: null
   });
 });
 
@@ -124,7 +132,8 @@ router.get("/test/multi-role", authorize([1, 2, 3]), async (req, res) => {
       userRole: req.user.role,
       requiredRoles: [1, 2, 3],
       description: "此接口允许角色为1（普通用户）、2（管理员）、3（超级管理员）的用户访问"
-    }
+    },
+    error: null
   });
 });
 
@@ -137,7 +146,8 @@ router.get("/test/any-user", authorize(), async (req, res) => {
       userRole: req.user.role,
       requiredRoles: "任何已登录用户",
       description: "此接口允许任何已登录的用户访问，无角色限制"
-    }
+    },
+    error: null
   });
 });
 

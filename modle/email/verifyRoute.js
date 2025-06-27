@@ -10,7 +10,7 @@ const sendVerificationCode = require("./verifyUtil");
 const sendCodeLimiter = rateLimit({
     windowMs: 10 * 60 * 1000, // 10 分钟
     max: 3,
-    message: { code: 429, message: '请求过于频繁，请稍后再试！', data: null }
+    message: { code: 429, message: '请求过于频繁，请稍后再试！', data: null, error: null }
   });
 
 // 验证码生成接口
@@ -20,14 +20,14 @@ router.post("/sendCode", sendCodeLimiter, async (req, res) => {
   if (!email) {
     return res
       .status(400)
-      .json({ code: 400, message: "邮箱地址不能为空", data: null });
+      .json({ code: 400, message: "邮箱地址不能为空", data: null, error: null });
   }
 
   // 验证type参数
   if (![1, 2].includes(type)) {
     return res
       .status(400)
-      .json({ code: 400, message: "type参数错误，1:注册 2:忘记密码", data: null });
+      .json({ code: 400, message: "type参数错误，1:注册 2:忘记密码", data: null, error: null });
   }
 
   try {
@@ -45,7 +45,8 @@ router.post("/sendCode", sendCodeLimiter, async (req, res) => {
         return res.status(400).json({
           code: 400,
           message: "该邮箱已被注册",
-          data: null
+          data: null,
+          error: null
         });
       }
     }
@@ -64,6 +65,7 @@ router.post("/sendCode", sendCodeLimiter, async (req, res) => {
         code: 200,
         message: `验证码已发送至邮箱 ${email}`,
         data: null,
+        error: null
       });
     } else {
       console.error("发送验证码失败：", error);
@@ -71,6 +73,7 @@ router.post("/sendCode", sendCodeLimiter, async (req, res) => {
         code: 500,
         message: "验证码发送失败，请稍后重试",
         data: null,
+        error: null
       });
     }
   } catch (error) {
@@ -79,6 +82,7 @@ router.post("/sendCode", sendCodeLimiter, async (req, res) => {
       code: 500,
       message: "验证码发送失败，请稍后重试",
       data: null,
+      error: null
     });
   }
 });

@@ -23,7 +23,8 @@ function authorize(roles = []) {
             return res.status(401).json({
                 code: 401,
                 message: '未提供授权信息',
-                data: null
+                data: null,
+                error: null
             });
         }
 
@@ -39,7 +40,8 @@ function authorize(roles = []) {
                 return res.status(401).json({
                     code: 401,
                     message: '无效的 Token',
-                    data: null
+                    data: null,
+                    error: null
                 });
             }
             // 重置 token 在 Redis 中的有效期到 3600 秒
@@ -52,7 +54,8 @@ function authorize(roles = []) {
                 return res.status(403).json({
                     code: 403,
                     message: `权限不足，用户角色 ${decoded.role} 无权限访问此资源`,
-                    data: null
+                    data: null,
+                    error: null
                 });
             }
 
@@ -64,7 +67,8 @@ function authorize(roles = []) {
             return res.status(401).json({
                 code: 401,
                 message: '无效的 Token',
-                data: null
+                data: null,
+                error: null
             });
         }
     };

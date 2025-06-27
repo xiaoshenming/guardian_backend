@@ -19,7 +19,7 @@ const loginLimiter = rateLimit({
 const registerLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1小时
   max: 3,
-  message: { code: 429, message: '注册尝试过于频繁，请稍后再试！', data: null },
+  message: { code: 429, message: '注册尝试过于频繁，请稍后再试！', data: null, error: null },
 });
 
 // 登录接口
@@ -31,7 +31,8 @@ router.post("/login", loginLimiter, async (req, res) => {
       return res.status(400).json({
         code: 400,
         message: "用户名/邮箱/手机号和密码不能为空",
-        data: null
+        data: null,
+        error: null
       });
     }
 
@@ -55,7 +56,8 @@ router.post("/login", loginLimiter, async (req, res) => {
       return res.status(401).json({
         code: 401,
         message: "用户不存在",
-        data: null
+        data: null,
+        error: null
       });
     }
 
@@ -65,7 +67,8 @@ router.post("/login", loginLimiter, async (req, res) => {
       return res.status(401).json({
         code: 401,
         message: "密码错误",
-        data: null
+        data: null,
+        error: null
       });
     }
 
@@ -90,7 +93,8 @@ router.post("/login", loginLimiter, async (req, res) => {
           email: user.email,
           loginName: user.login_name
         }
-      }
+      },
+      error: null
     });
 
   } catch (error) {
@@ -98,7 +102,8 @@ router.post("/login", loginLimiter, async (req, res) => {
     res.status(500).json({
       code: 500,
       message: "服务器内部错误",
-      data: null
+      data: null,
+      error: null
     });
   }
 });
@@ -113,7 +118,8 @@ router.post("/register", registerLimiter, async (req, res) => {
       return res.status(400).json({
         code: 400,
         message: "用户名、邮箱、密码和验证码不能为空",
-        data: null
+        data: null,
+        error: null
       });
     }
 
@@ -123,7 +129,8 @@ router.post("/register", registerLimiter, async (req, res) => {
       return res.status(400).json({
         code: 400,
         message: "邮箱格式不正确",
-        data: null
+        data: null,
+        error: null
       });
     }
 
@@ -132,7 +139,8 @@ router.post("/register", registerLimiter, async (req, res) => {
       return res.status(400).json({
         code: 400,
         message: "密码长度至少为6位",
-        data: null
+        data: null,
+        error: null
       });
     }
 
@@ -144,7 +152,8 @@ router.post("/register", registerLimiter, async (req, res) => {
       return res.status(400).json({
         code: 400,
         message: "验证码已过期或不存在",
-        data: null
+        data: null,
+        error: null
       });
     }
 
@@ -152,7 +161,8 @@ router.post("/register", registerLimiter, async (req, res) => {
       return res.status(400).json({
         code: 400,
         message: "验证码错误",
-        data: null
+        data: null,
+        error: null
       });
     }
 
@@ -162,7 +172,8 @@ router.post("/register", registerLimiter, async (req, res) => {
       return res.status(400).json({
         code: 400,
         message: "该邮箱已被注册",
-        data: null
+        data: null,
+        error: null
       });
     }
 
@@ -172,7 +183,8 @@ router.post("/register", registerLimiter, async (req, res) => {
       return res.status(400).json({
         code: 400,
         message: "该用户名已被使用",
-        data: null
+        data: null,
+        error: null
       });
     }
 
@@ -192,7 +204,8 @@ router.post("/register", registerLimiter, async (req, res) => {
       data: {
         userId: result.userId,
         loginId: result.loginId
-      }
+      },
+      error: null
     });
 
   } catch (error) {
@@ -200,7 +213,8 @@ router.post("/register", registerLimiter, async (req, res) => {
     res.status(500).json({
       code: 500,
       message: "服务器内部错误",
-      data: null
+      data: null,
+      error: null
     });
   }
 });
@@ -217,7 +231,8 @@ router.post("/logout", authorize(), async (req, res) => {
     res.json({
       code: 200,
       message: "退出登录成功",
-      data: null
+      data: null,
+      error: null
     });
 
   } catch (error) {
@@ -225,7 +240,8 @@ router.post("/logout", authorize(), async (req, res) => {
     res.status(500).json({
       code: 500,
       message: "服务器内部错误",
-      data: null
+      data: null,
+      error: null
     });
   }
 });
@@ -239,7 +255,8 @@ router.post("/forget", async (req, res) => {
       return res.status(400).json({
         code: 400,
         message: "邮箱、新密码和验证码不能为空",
-        data: null
+        data: null,
+        error: null
       });
     }
 
@@ -248,7 +265,8 @@ router.post("/forget", async (req, res) => {
       return res.status(400).json({
         code: 400,
         message: "密码长度至少为6位",
-        data: null
+        data: null,
+        error: null
       });
     }
 
@@ -260,7 +278,8 @@ router.post("/forget", async (req, res) => {
       return res.status(400).json({
         code: 400,
         message: "验证码已过期或不存在",
-        data: null
+        data: null,
+        error: null
       });
     }
 
@@ -268,7 +287,8 @@ router.post("/forget", async (req, res) => {
       return res.status(400).json({
         code: 400,
         message: "验证码错误",
-        data: null
+        data: null,
+        error: null
       });
     }
 
@@ -278,7 +298,8 @@ router.post("/forget", async (req, res) => {
       return res.status(404).json({
         code: 404,
         message: "用户不存在",
-        data: null
+        data: null,
+        error: null
       });
     }
 
@@ -291,7 +312,8 @@ router.post("/forget", async (req, res) => {
     res.json({
       code: 200,
       message: "密码重置成功",
-      data: null
+      data: null,
+      error: null
     });
 
   } catch (error) {
@@ -299,7 +321,8 @@ router.post("/forget", async (req, res) => {
     res.status(500).json({
       code: 500,
       message: "服务器内部错误",
-      data: null
+      data: null,
+      error: null
     });
   }
 });
