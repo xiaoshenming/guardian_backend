@@ -7,8 +7,8 @@ const port = process.env.PORT || 3000; // 默认端口
 const http = require("http"); // 用于创建 HTTP 服务器
 const server = http.createServer(app); // 创建 HTTP 服务器
 // 2. 导入并初始化 WebSocket 服务
-const { initWebSocket } = require("./config/websockets");
-initWebSocket(server);
+// const { initWebSocket } = require("./config/websockets");
+// initWebSocket(server);
 const { startHeartbeats } = require("./config/heartbeat"); // 启动心跳检测（Redis 与 MySQL）
 app.use(express.json()); // 解析 JSON 请求体
 app.use(cors()); // 启用 CORS 中间件

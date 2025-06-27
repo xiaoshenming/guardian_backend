@@ -4,25 +4,25 @@ require("dotenv").config(); // 确保 .env 文件被读取
 // 路径调整：假设 db.js 和 redis.js 在项目根目录，heartbeat.js 在 config/ 目录下
 const redis = require("./redis");
 const db = require("./db");
-const mqttClient = require("./emqx"); 
+// const mqttClient = require("./emqx"); 
 
 const MQTT_CLIENT_ID = process.env.MQTT_CLIENT_ID;
 //从环境变量获取订阅给心跳使用
 
 function startHeartbeats() {
 
-  setInterval(() => {
-    if (mqttClient.connected) {
-      // 再次检查连接状态以防万一
-      const heartbeatMessage = JSON.stringify({
-        clientId: MQTT_CLIENT_ID,
-        timestamp: new Date().toISOString(),
-        status: "alive",
-        source: "backend_heartbeat_service", // 标识心跳来源
-      });
-      //发布心跳
-    }
-  }, 30000); // 每 30 秒发布一次 MQTT 心跳
+  // setInterval(() => {
+  //   if (mqttClient.connected) {
+  //     // 再次检查连接状态以防万一
+  //     const heartbeatMessage = JSON.stringify({
+  //       clientId: MQTT_CLIENT_ID,
+  //       timestamp: new Date().toISOString(),
+  //       status: "alive",
+  //       source: "backend_heartbeat_service", // 标识心跳来源
+  //     });
+  //     //发布心跳
+  //   }
+  // }, 30000); // 每 30 秒发布一次 MQTT 心跳
     
   // Redis 心跳
   setInterval(async () => {
