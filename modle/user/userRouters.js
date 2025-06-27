@@ -151,4 +151,60 @@ router.get("/test/any-user", authorize(), async (req, res) => {
   });
 });
 
+// 获取用户仪表板统计信息
+router.get("/dashboard-stats", authorize(), async (req, res) => {
+  try {
+    const userId = req.user.uid || req.user.id;
+    
+    // 导入需要的工具模块
+    const circleUtils = require("../circle/circleUtils");
+    const deviceUtils = require("../device/deviceUtils");
+    const eventUtils = require("../event/eventUtils");
+    
+    // 获取用户的守护圈列表
+    const userCircles = await circleUtils.getUserCircles(userId);
+    const totalCircles = userCircles.length;
+    
+    // 统计所有守护圈的设备数量
+    let totalDevices = 0;
+    let onlineDevices = 0;
+    let urgentAlerts = 0;
+    let todayEvents = 0;
+    
+    for (const circle of userCircles) {
+      // 获取守护圈设备统计
+      const deviceStats = await deviceUtils.getDeviceStats(circle.id);
+      totalDevices += deviceStats.total_devices || 0;
+      onlineDevices += deviceStats.online_devices || 0;
+      todayEvents += deviceStats.today_events || 0;
+      
+      // 获取紧急告警数量（今日）
+      const alertStats = await eventUtils.getAlertStats(circle.id);
+      urgentAlerts += alertStats.urgent_today || 0;
+    }
+    
+    res.json({
+      code: 200,
+      message: "获取用户统计信息成功",
+      data: {
+        totalCircles,
+        totalDevices,
+        onlineDevices,
+        urgentAlerts,
+        todayEvents
+      },
+      error: null
+    });
+    
+  } catch (error) {
+    console.error("获取用户统计信息错误:", error);
+    res.status(500).json({
+      code: 500,
+      message: "获取统计信息失败",
+      data: null,
+      error: null
+    });
+  }
+});
+
 module.exports = router;

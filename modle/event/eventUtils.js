@@ -477,6 +477,73 @@ const getEventStats = async (circleId, period = 'today') => {
   };
 };
 
+// 获取告警统计信息
+const getAlertStats = async (circleId) => {
+  const query = `
+    SELECT 
+      COUNT(CASE WHEN alert_level >= 3 AND DATE(create_time) = CURDATE() THEN 1 END) as urgent_today,
+      COUNT(CASE WHEN alert_level >= 3 AND DATE(create_time) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 1 END) as urgent_week,
+      COUNT(CASE WHEN status = 0 THEN 1 END) as unacknowledged,
+      COUNT(*) as total
+    FROM alert_log 
+    WHERE circle_id = ?
+  `;
+  
+  const result = await db.execute(query, [circleId]);
+  return result && result[0] && result[0][0] ? result[0][0] : {
+    urgent_today: 0,
+    urgent_week: 0,
+    unacknowledged: 0,
+    total: 0
+  };
+};
+
+// 获取最近事件列表
+const getRecentEvents = async (options = {}) => {
+  const { circleIds, limit = 10, eventType } = options;
+  
+  if (!circleIds || circleIds.length === 0) {
+    return [];
+  }
+  
+  let whereClause = `WHERE e.circle_id IN (${circleIds.map(() => '?').join(',')})`;
+  let params = [...circleIds];
+  
+  if (eventType) {
+    whereClause += ' AND e.event_type = ?';
+    params.push(eventType);
+  }
+  
+  const query = `
+    SELECT 
+      e.id,
+      e.event_type,
+      e.event_data,
+      e.event_time,
+      e.create_time,
+      d.device_name,
+      d.device_sn,
+      d.device_model,
+      gc.circle_name
+    FROM event_log e
+    LEFT JOIN device_info d ON e.device_id = d.id
+    LEFT JOIN guardian_circle gc ON e.circle_id = gc.id
+    ${whereClause}
+    ORDER BY e.event_time DESC
+    LIMIT ?
+  `;
+  
+  params.push(limit);
+  const result = await db.execute(query, params);
+  const events = result && result[0] ? result[0] : [];
+  
+  // 解析事件数据
+  return events.map(event => ({
+    ...event,
+    event_data: JSON.parse(event.event_data || '{}')
+  }));
+};
+
 module.exports = {
   createEvent,
   getCircleEvents,
@@ -489,5 +556,7 @@ module.exports = {
   getCircleAlerts,
   getAlertById,
   acknowledgeAlert,
-  getEventStats
+  getEventStats,
+  getAlertStats,
+  getRecentEvents
 };

@@ -361,4 +361,54 @@ router.get('/stats/circle/:circleId', authorize([1, 2, 3]), async (req, res) => 
   }
 });
 
+// 获取最近事件列表
+router.get('/recent', authorize(), async (req, res) => {
+  try {
+    const { limit = 10, event_type } = req.query;
+    const userId = req.user.uid || req.user.id;
+    
+    // 获取用户的所有守护圈
+    const userCircles = await circleUtils.getUserCircles(userId);
+    
+    if (userCircles.length === 0) {
+      return res.json({
+        code: 200,
+        message: '获取最近事件成功',
+        data: {
+          list: [],
+          total: 0
+        },
+        error: null
+      });
+    }
+    
+    // 获取用户所有守护圈的最近事件
+    const circleIds = userCircles.map(circle => circle.id);
+    const events = await eventUtils.getRecentEvents({
+      circleIds,
+      limit: parseInt(limit),
+      eventType: event_type
+    });
+    
+    res.json({
+      code: 200,
+      message: '获取最近事件成功',
+      data: {
+        list: events,
+        total: events.length
+      },
+      error: null
+    });
+    
+  } catch (error) {
+    console.error('获取最近事件错误:', error);
+    res.status(500).json({
+      code: 500,
+      message: '获取最近事件失败',
+      data: null,
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;
