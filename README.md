@@ -7,7 +7,7 @@
 -- -- 刷新权限，使更改立即生效
 -- FLUSH PRIVILEGES;
 
--- 创建名为guardian的数据库（如果不存在）
+-- 创建名为DriveGo的数据库（如果不存在）
 CREATE DATABASE IF NOT EXISTS guardian CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------------------------------
@@ -86,7 +86,7 @@ CREATE TABLE `guardian_circle` (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_creator_uid`(`creator_uid`) USING BTREE,
   INDEX `idx_circle_code`(`circle_code`) USING BTREE
-) ENGINE=InnoDB COMMENT='守护圈信息表';
+) ENGINE=InnoDB COMMENT='守护圈信息表 ';
 
 -- ----------------------------
 -- 4. 守护圈成员关系表 (circle_member_map)

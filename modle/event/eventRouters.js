@@ -233,52 +233,6 @@ router.get('/recent', authorize(), async (req, res) => {
   }
 });
 
-// 获取事件详情
-router.get('/:eventId', authorize([1, 2, 3]), async (req, res) => {
-  try {
-    const { eventId } = req.params;
-    const userId = req.user.uid;
-
-    // 获取事件详情
-    const event = await eventUtils.getEventDetail(eventId);
-    if (!event) {
-      return res.status(404).json({
-        code: 404,
-        message: '事件不存在',
-        data: null,
-        error: null
-      });
-    }
-
-    // 检查用户是否有权限访问该事件
-    const membership = await circleUtils.checkMembership(event.circle_id, userId);
-    if (!membership) {
-      return res.status(403).json({
-        code: 403,
-        message: '您没有权限访问该事件',
-        data: null,
-        error: null
-      });
-    }
-    
-    res.json({
-      code: 200,
-      message: '获取事件详情成功',
-      data: event,
-      error: null
-    });
-
-  } catch (error) {
-    console.error('获取事件详情错误:', error);
-    res.status(500).json({
-      code: 500,
-      message: '获取事件详情失败',
-      data: null,
-      error: error.message
-    });
-  }
-});
-
 // 获取告警列表
 router.get('/alerts/circle/:circleId', authorize([1, 2, 3]), async (req, res) => {
   try {
@@ -372,6 +326,236 @@ router.put('/alerts/:alertId/acknowledge', authorize([1, 2, 3]), async (req, res
   }
 });
 
+// 获取事件列表（通用接口，支持分页和状态筛选）
+router.get('/', authorize(), async (req, res) => {
+  try {
+    const { page = 1, pageSize = 10, status } = req.query;
+    const userId = req.user.uid || req.user.id;
+    
+    // 获取用户的所有守护圈
+    const userCircles = await circleUtils.getUserCircles(userId);
+    
+    if (userCircles.length === 0) {
+      return res.json({
+        code: 200,
+        message: '获取事件列表成功',
+        data: {
+          list: [],
+          total: 0,
+          page: parseInt(page),
+          pageSize: parseInt(pageSize)
+        },
+        error: null
+      });
+    }
+    
+    // 获取用户所有守护圈的事件列表
+    const circleIds = userCircles.map(circle => circle.id);
+    const events = await eventUtils.getAllEvents({
+      circleIds,
+      page: parseInt(page),
+      limit: parseInt(pageSize),
+      status: status === 'pending' ? 0 : (status === 'handled' ? 1 : undefined)
+    });
+    
+    res.json({
+      code: 200,
+      message: '获取事件列表成功',
+      data: {
+        list: events.list,
+        total: events.total,
+        page: parseInt(page),
+        pageSize: parseInt(pageSize)
+      },
+      error: null
+    });
+    
+  } catch (error) {
+    console.error('获取事件列表错误:', error);
+    res.status(500).json({
+      code: 500,
+      message: '获取事件列表失败',
+      data: null,
+      error: error.message
+    });
+  }
+});
+
+// 获取未处理事件数量（兼容前端调用）
+router.get('/pending-count', authorize(), async (req, res) => {
+  try {
+    const userId = req.user.uid || req.user.id;
+    
+    // 获取用户的所有守护圈
+    const userCircles = await circleUtils.getUserCircles(userId);
+    
+    if (userCircles.length === 0) {
+      return res.json({
+        code: 200,
+        message: '获取未处理事件数量成功',
+        data: {
+          count: 0
+        },
+        error: null
+      });
+    }
+    
+    // 获取用户所有守护圈的未处理事件数量
+    const circleIds = userCircles.map(circle => circle.id);
+    const count = await eventUtils.getUnhandledEventCount(circleIds);
+    
+    res.json({
+      code: 200,
+      message: '获取未处理事件数量成功',
+      data: {
+        count
+      },
+      error: null
+    });
+    
+  } catch (error) {
+    console.error('获取未处理事件数量错误:', error);
+    res.status(500).json({
+      code: 500,
+      message: '获取未处理事件数量失败',
+      data: null,
+      error: error.message
+    });
+  }
+});
+
+// 获取未处理事件数量
+router.get('/unhandled-count', authorize(), async (req, res) => {
+  try {
+    const userId = req.user.uid || req.user.id;
+    
+    // 获取用户的所有守护圈
+    const userCircles = await circleUtils.getUserCircles(userId);
+    
+    if (userCircles.length === 0) {
+      return res.json({
+        code: 200,
+        message: '获取未处理事件数量成功',
+        data: {
+          count: 0
+        },
+        error: null
+      });
+    }
+    
+    // 获取用户所有守护圈的未处理事件数量
+    const circleIds = userCircles.map(circle => circle.id);
+    const count = await eventUtils.getUnhandledEventCount(circleIds);
+    
+    res.json({
+      code: 200,
+      message: '获取未处理事件数量成功',
+      data: {
+        count
+      },
+      error: null
+    });
+    
+  } catch (error) {
+    console.error('获取未处理事件数量错误:', error);
+    res.status(500).json({
+      code: 500,
+      message: '获取未处理事件数量失败',
+      data: null,
+      error: error.message
+    });
+  }
+});
+
+// 处理单个事件
+router.post('/:eventId/handle', authorize(), async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const { status, note } = req.body;
+    const userId = req.user.uid || req.user.id;
+
+    // 获取事件详情（这里假设是告警ID）
+    const alert = await eventUtils.getAlertById(eventId);
+    if (!alert) {
+      return res.status(404).json({
+        code: 404,
+        message: '事件不存在',
+        data: null,
+        error: null
+      });
+    }
+
+    // 检查用户是否有权限处理该事件
+    const membership = await circleUtils.checkMembership(alert.circle_id, userId);
+    if (!membership) {
+      return res.status(403).json({
+        code: 403,
+        message: '您没有权限处理该事件',
+        data: null,
+        error: null
+      });
+    }
+
+    // 处理事件（确认告警）
+    await eventUtils.handleAlert(eventId, userId, { status, note });
+    
+    res.json({
+      code: 200,
+      message: '事件处理成功',
+      data: null,
+      error: null
+    });
+
+  } catch (error) {
+    console.error('处理事件错误:', error);
+    res.status(500).json({
+      code: 500,
+      message: '处理事件失败',
+      data: null,
+      error: error.message
+    });
+  }
+});
+
+// 批量处理事件
+router.post('/batch-handle', authorize(), async (req, res) => {
+  try {
+    const { ids, status, note } = req.body;
+    const userId = req.user.uid || req.user.id;
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({
+        code: 400,
+        message: '事件ID列表不能为空',
+        data: null,
+        error: null
+      });
+    }
+
+    // 批量处理事件
+    const results = await eventUtils.batchHandleAlerts(ids, userId, { status, note });
+    
+    res.json({
+      code: 200,
+      message: '批量处理事件成功',
+      data: {
+        processed: results.processed,
+        failed: results.failed
+      },
+      error: null
+    });
+
+  } catch (error) {
+    console.error('批量处理事件错误:', error);
+    res.status(500).json({
+      code: 500,
+      message: '批量处理事件失败',
+      data: null,
+      error: error.message
+    });
+  }
+});
+
 // 获取事件统计
 router.get('/stats/circle/:circleId', authorize([1, 2, 3]), async (req, res) => {
   try {
@@ -405,6 +589,52 @@ router.get('/stats/circle/:circleId', authorize([1, 2, 3]), async (req, res) => 
     res.status(500).json({
       code: 500,
       message: '获取事件统计失败',
+      data: null,
+      error: error.message
+    });
+  }
+});
+
+// 获取事件详情 (参数化路由放在最后，避免与具体路由冲突)
+router.get('/:eventId', authorize([1, 2, 3]), async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const userId = req.user.uid;
+
+    // 获取事件详情
+    const event = await eventUtils.getEventDetail(eventId);
+    if (!event) {
+      return res.status(404).json({
+        code: 404,
+        message: '事件不存在',
+        data: null,
+        error: null
+      });
+    }
+
+    // 检查用户是否有权限访问该事件
+    const membership = await circleUtils.checkMembership(event.circle_id, userId);
+    if (!membership) {
+      return res.status(403).json({
+        code: 403,
+        message: '您没有权限访问该事件',
+        data: null,
+        error: null
+      });
+    }
+    
+    res.json({
+      code: 200,
+      message: '获取事件详情成功',
+      data: event,
+      error: null
+    });
+
+  } catch (error) {
+    console.error('获取事件详情错误:', error);
+    res.status(500).json({
+      code: 500,
+      message: '获取事件详情失败',
       data: null,
       error: error.message
     });

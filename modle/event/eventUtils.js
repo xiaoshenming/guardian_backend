@@ -1,4 +1,4 @@
-const db = require('../../config/db');
+const db = require('../../config/db').promise();
 
 // 创建事件记录
 const createEvent = async (eventData) => {
@@ -268,7 +268,7 @@ const generateAlert = async (alertData) => {
   const { eventId, circleId, alertLevel, alertContent } = alertData;
   
   const query = `
-    INSERT INTO alerts (event_id, circle_id, alert_level, alert_content, status, created_at)
+    INSERT INTO alert_log (event_id, circle_id, alert_level, alert_content, status, create_time)
     VALUES (?, ?, ?, ?, 0, NOW())
   `;
   
@@ -303,7 +303,7 @@ const getCircleAlerts = async (circleId, options = {}) => {
   // 获取总数
   const countQuery = `
     SELECT COUNT(*) as total
-    FROM alerts a
+    FROM alert_log a
     ${whereClause}
   `;
   
@@ -318,9 +318,9 @@ const getCircleAlerts = async (circleId, options = {}) => {
       a.alert_level,
       a.alert_content,
       a.status,
-      a.acknowledged_by,
-      a.acknowledged_at,
-      a.created_at,
+      a.acknowledged_by_uid,
+      a.acknowledged_time,
+      a.create_time,
       e.event_type,
       e.event_time,
       d.device_name,
@@ -329,9 +329,9 @@ const getCircleAlerts = async (circleId, options = {}) => {
     FROM alert_log a
     LEFT JOIN event_log e ON a.event_id = e.id
     LEFT JOIN device_info d ON e.device_id = d.id
-    LEFT JOIN user_profile u ON a.acknowledged_by = u.uid
+    LEFT JOIN user_profile u ON a.acknowledged_by_uid = u.id
     ${whereClause}
-    ORDER BY a.created_at DESC
+    ORDER BY a.create_time DESC
     LIMIT ? OFFSET ?
   `;
   
@@ -383,8 +383,8 @@ const getAlertById = async (alertId) => {
 // 确认告警
 const acknowledgeAlert = async (alertId, userId) => {
   const query = `
-    UPDATE alerts 
-    SET status = 1, acknowledged_by = ?, acknowledged_at = NOW()
+    UPDATE alert_log 
+    SET status = 1, acknowledged_by_uid = ?, acknowledged_time = NOW()
     WHERE id = ?
   `;
   
@@ -544,6 +544,130 @@ const getRecentEvents = async (options = {}) => {
   }));
 };
 
+// 获取所有事件列表（支持多个守护圈）
+const getAllEvents = async (options = {}) => {
+  const { circleIds, page = 1, limit = 10, status } = options;
+  const offset = (page - 1) * limit;
+  
+  if (!circleIds || circleIds.length === 0) {
+    return { list: [], total: 0 };
+  }
+  
+  const placeholders = circleIds.map(() => '?').join(',');
+  let whereClause = `WHERE a.circle_id IN (${placeholders})`;
+  let params = [...circleIds];
+  
+  if (status !== undefined) {
+    whereClause += ' AND a.status = ?';
+    params.push(status);
+  }
+  
+  // 获取总数
+  const countQuery = `
+    SELECT COUNT(*) as total
+    FROM alert_log a
+    ${whereClause}
+  `;
+  
+  const [countResult] = await db.execute(countQuery, params);
+  const total = countResult && countResult[0] ? countResult[0].total : 0;
+  
+  // 获取列表数据
+  const listQuery = `
+    SELECT 
+      a.id,
+      a.event_id,
+      a.circle_id,
+      a.alert_level,
+      a.alert_content,
+      a.status,
+      a.acknowledged_by_uid,
+      a.acknowledged_time,
+      a.create_time,
+      c.circle_name as circle_name,
+      e.event_type,
+      e.event_data,
+      d.device_name,
+      d.device_sn
+    FROM alert_log a
+    LEFT JOIN guardian_circle c ON a.circle_id = c.id
+    LEFT JOIN event_log e ON a.event_id = e.id
+    LEFT JOIN device_info d ON e.device_id = d.id
+    ${whereClause}
+    ORDER BY a.create_time DESC
+    LIMIT ? OFFSET ?
+  `;
+  
+  const [listResult] = await db.execute(listQuery, [...params, limit, offset]);
+  
+  return {
+    list: listResult || [],
+    total
+  };
+};
+
+// 处理单个告警
+const handleAlert = async (alertId, userId, options = {}) => {
+  const { status = 'handled', note } = options;
+  
+  const query = `
+    UPDATE alert_log 
+    SET status = 1, acknowledged_by_uid = ?, acknowledged_time = NOW()
+    WHERE id = ?
+  `;
+  
+  const [result] = await db.execute(query, [userId, alertId]);
+  return result.affectedRows > 0;
+};
+
+// 批量处理告警
+const batchHandleAlerts = async (alertIds, userId, options = {}) => {
+  const { status = 'handled', note } = options;
+  
+  if (!alertIds || alertIds.length === 0) {
+    return { processed: 0, failed: 0 };
+  }
+  
+  let processed = 0;
+  let failed = 0;
+  
+  for (const alertId of alertIds) {
+    try {
+      const success = await handleAlert(alertId, userId, { status, note });
+      if (success) {
+        processed++;
+      } else {
+        failed++;
+      }
+    } catch (error) {
+      console.error(`处理告警 ${alertId} 失败:`, error);
+      failed++;
+    }
+  }
+  
+  return { processed, failed };
+};
+
+// 获取未处理事件数量
+const getUnhandledEventCount = async (circleIds) => {
+  if (!circleIds || circleIds.length === 0) {
+    return 0;
+  }
+  
+  const placeholders = circleIds.map(() => '?').join(',');
+  
+  const query = `
+    SELECT COUNT(*) as count
+    FROM alert_log a
+    WHERE a.circle_id IN (${placeholders})
+    AND a.status = 0
+    AND a.create_time >= CURDATE()
+  `;
+  
+  const [result] = await db.execute(query, circleIds);
+  return result && result[0] ? result[0].count : 0;
+};
+
 module.exports = {
   createEvent,
   getCircleEvents,
@@ -558,5 +682,9 @@ module.exports = {
   acknowledgeAlert,
   getEventStats,
   getAlertStats,
-  getRecentEvents
+  getRecentEvents,
+  getAllEvents,
+  handleAlert,
+  batchHandleAlerts,
+  getUnhandledEventCount
 };

@@ -14,6 +14,7 @@ const emailRouter = require("./modle/email/verifyRoute");
 const circleRouter = require("./modle/circle/circleRouters");
 const deviceRouter = require("./modle/device/deviceRouters");
 const eventRouter = require("./modle/event/eventRouters");
+const dashboardRouter = require("./modle/dashboard/dashboardRouters");
 
 // 导入服务
 const mqttService = require("./modle/mqtt/mqttService");
@@ -35,6 +36,8 @@ app.use("/api/email", emailRouter); // 邮箱验证相关路由
 app.use("/api/circle", circleRouter); // 守护圈相关路由
 app.use("/api/device", deviceRouter); // 设备相关路由
 app.use("/api/event", eventRouter); // 事件相关路由
+app.use("/api/events", eventRouter); // 事件相关路由（兼容前端调用）
+app.use("/api/dashboard", dashboardRouter); // 仪表板相关路由
 
 // 根路径响应
 app.get("/", (req, res) => {
