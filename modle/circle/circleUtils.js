@@ -221,6 +221,72 @@ async function removeMemberFromCircle(circleId, uid) {
 }
 
 /**
+ * 更新守护圈信息
+ */
+async function updateCircle(circleId, updateData) {
+  return new Promise((resolve, reject) => {
+    const query = `
+      UPDATE guardian_circle 
+      SET circle_name = ?, description = ?, update_time = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `;
+    
+    db.query(query, [updateData.circleName, updateData.description, circleId], (err, results) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(results);
+      }
+    });
+  });
+}
+
+/**
+ * 删除守护圈
+ */
+async function deleteCircle(circleId) {
+  return new Promise((resolve, reject) => {
+    // 开始事务
+    db.beginTransaction((err) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      
+      // 先删除所有成员关系
+      const deleteMembersQuery = 'DELETE FROM circle_member_map WHERE circle_id = ?';
+      db.query(deleteMembersQuery, [circleId], (err) => {
+        if (err) {
+          return db.rollback(() => {
+            reject(err);
+          });
+        }
+        
+        // 删除守护圈
+        const deleteCircleQuery = 'DELETE FROM guardian_circle WHERE id = ?';
+        db.query(deleteCircleQuery, [circleId], (err, results) => {
+          if (err) {
+            return db.rollback(() => {
+              reject(err);
+            });
+          }
+          
+          // 提交事务
+          db.commit((err) => {
+            if (err) {
+              return db.rollback(() => {
+                reject(err);
+              });
+            }
+            resolve(results);
+          });
+        });
+      });
+    });
+  });
+}
+
+/**
  * 获取守护圈统计信息
  */
 async function getCircleStats(circleId) {
@@ -259,5 +325,7 @@ module.exports = {
   getCircleMembers,
   updateMemberRole,
   removeMemberFromCircle,
+  updateCircle,
+  deleteCircle,
   getCircleStats
 };

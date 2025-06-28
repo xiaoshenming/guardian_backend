@@ -311,6 +311,83 @@ router.delete('/:circleId/members/:memberId', authorize([1, 2, 3]), async (req, 
   }
 });
 
+// 更新守护圈信息（仅圈主可操作）
+router.put('/:circleId', authorize([1, 2, 3]), async (req, res) => {
+  try {
+    const { circleId } = req.params;
+    const { circleName, description } = req.body;
+    const userId = req.user.uid;
+
+    // 检查操作者是否是圈主
+    const operatorMembership = await circleUtils.checkMembership(circleId, userId);
+    if (!operatorMembership || operatorMembership.member_role !== 0) {
+      return res.status(403).json({
+        code: 403,
+        message: '只有圈主可以修改守护圈信息',
+        data: null,
+        error: null
+      });
+    }
+
+    // 更新守护圈信息
+    await circleUtils.updateCircle(circleId, { circleName, description });
+    
+    res.json({
+      code: 200,
+      message: '守护圈信息更新成功',
+      data: null,
+      error: null
+    });
+
+  } catch (error) {
+    console.error('更新守护圈信息错误:', error);
+    res.status(500).json({
+      code: 500,
+      message: '更新守护圈信息失败',
+      data: null,
+      error: error.message
+    });
+  }
+});
+
+// 删除守护圈（仅圈主可操作）
+router.delete('/:circleId', authorize([1, 2, 3]), async (req, res) => {
+  try {
+    const { circleId } = req.params;
+    const userId = req.user.uid;
+
+    // 检查操作者是否是圈主
+    const operatorMembership = await circleUtils.checkMembership(circleId, userId);
+    if (!operatorMembership || operatorMembership.member_role !== 0) {
+      return res.status(403).json({
+        code: 403,
+        message: '只有圈主可以删除守护圈',
+        data: null,
+        error: null
+      });
+    }
+
+    // 删除守护圈
+    await circleUtils.deleteCircle(circleId);
+    
+    res.json({
+      code: 200,
+      message: '守护圈删除成功',
+      data: null,
+      error: null
+    });
+
+  } catch (error) {
+    console.error('删除守护圈错误:', error);
+    res.status(500).json({
+      code: 500,
+      message: '删除守护圈失败',
+      data: null,
+      error: error.message
+    });
+  }
+});
+
 // 退出守护圈
 router.post('/:circleId/leave', authorize([1, 2, 3]), async (req, res) => {
   try {
