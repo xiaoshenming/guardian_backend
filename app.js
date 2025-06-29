@@ -17,11 +17,16 @@ import emailRouter from "./modle/email/verifyRoute.js";
 import circleRouter from "./modle/guardian/circleRoute.js"; // 1. 导入守护圈路由
 import memberRouter from "./modle/guardian/memberRoute.js"; // 1. 导入成员管理路由
 import deviceRouter from "./modle/guardian/deviceRoute.js"; // 1. 导入设备管理路由
+import eventRouter from './modle/guardian/eventRoute.js';
+import alertRouter from './modle/guardian/alertRoute.js';
+import smartHomeDeviceRouter from "./modle/guardian/smartHomeDeviceRoute.js";
+import actionRuleRouter from "./modle/guardian/actionRuleRoute.js";
+
 // 2. 导入并初始化 WebSocket 服务
 // import { initWebSocket } from "./config/websockets.js";
 // initWebSocket(server);
 import { startHeartbeats } from "./config/heartbeat.js"; // 启动心跳检测（Redis 与 MySQL）
-
+import { initMqtt } from './modle/guardian/mqttHandler.js'; // 1. 导入 MQTT 初始化函数
 // 中间件
 app.use(express.json()); // 解析 JSON 请求体
 app.use(cors()); // 启用 CORS 中间件
@@ -33,6 +38,11 @@ app.use("/api/email", emailRouter); // 邮箱验证相关路由
 app.use("/api/guardian/circle", circleRouter); // 2. 使用守护圈路由，并设置基础路径
 app.use("/api/guardian/member", memberRouter); // 2. 使用成员管理路由，并设置基础路径
 app.use("/api/guardian/device", deviceRouter); // 2. 使用设备管理路由，并设置基础路径
+
+app.use("/api/guardian", eventRouter);
+app.use("/api/guardian", alertRouter);
+app.use("/api/guardian", smartHomeDeviceRouter);
+app.use("/api/guardian", actionRuleRouter);
 // 根路径响应
 app.get("/", (req, res) => {
   res.json({
@@ -63,6 +73,16 @@ app.use("*", (req, res) => {
 // 全局错误处理
 app.use((err, req, res, next) => {
   console.error("全局错误:", err);
+  // 对于业务逻辑中主动抛出的、带有 statusCode 的错误进行特殊处理
+  if (err.statusCode) {
+    return res.status(err.statusCode).json({
+      code: err.statusCode,
+      message: err.message,
+      data: null,
+      error: err.name || 'Error'
+    });
+  }
+  // 对于其他未预料的服务器错误，统一返回 500 错误
   res.status(500).json({
     code: 500,
     message: "服务器内部错误",
@@ -72,8 +92,9 @@ app.use((err, req, res, next) => {
 });
 
 startHeartbeats(); // 启动心跳检测服务
+initMqtt(); // 2. 启动 MQTT 监听
 
 server.listen(port, "0.0.0.0", () => {
-    console.log(`服务器已启动，监听端口：http://0.0.0.0:${port}`);
-    console.log(`API文档地址: http://0.0.0.0:${port}`);
+  console.log(`✅ Guardian 服务器已启动，监听端口：http://0.0.0.0:${port}`);
+  console.log(`✅ API 文档地址: http://0.0.0.0:${port}`);
 });
