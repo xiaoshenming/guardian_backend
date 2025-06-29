@@ -1,4 +1,4 @@
-const db = require('../../config/db').promise();
+const db = require('../../config/db');
 
 // 创建事件记录
 const createEvent = async (eventData) => {
@@ -17,7 +17,7 @@ const createEvent = async (eventData) => {
     eventTime
   ]);
   
-  return insertResult && insertResult[0] ? insertResult[0].insertId : null;
+  return result && result[0] ? result[0].insertId : null;
 };
 
 // 获取守护圈的事件列表
