@@ -1,6 +1,8 @@
-// config/db.js (或者您实际的路径)
-const mysql = require("mysql2"); // 引入 mysql2 库
-require("dotenv").config(); // 加载环境变量
+//// config/db.js
+import mysql from "mysql2"; // 引入 mysql2 库
+import dotenv from "dotenv"; // 加载环境变量
+
+dotenv.config(); // 加载环境变量
 
 // 从环境变量中获取数据库配置
 const HOST = process.env.MYSQL_HOST;
@@ -51,4 +53,4 @@ pool.getConnection((err, connection) => {
 });
 
 // 导出连接池实例
-module.exports = pool;
+export default pool;

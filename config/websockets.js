@@ -1,5 +1,5 @@
 // config/websockets.js
-const { Server } = require("socket.io");
+import { Server } from "socket.io";
 
 let io;
 
@@ -31,4 +31,4 @@ const getIo = () => {
   return io;
 };
 
-module.exports = { initWebSocket, getIo };
+export { initWebSocket, getIo };

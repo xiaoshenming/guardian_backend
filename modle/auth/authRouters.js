@@ -1,10 +1,11 @@
-// modle/auth/authRouters.js
-const express = require("express");
+// authRouters.js
+import express from "express";
+import rateLimit from "express-rate-limit";
+import redis from "../../config/redis.js";
+import userUtils from "../user/userUtils.js";
+import authorize from "./authUtils.js";
+
 const router = express.Router();
-const rateLimit = require("express-rate-limit");
-const redis = require("../../config/redis");
-const userUtils = require("../user/userUtils");
-const authorize = require("./authUtils");
 
 // 登录限流：每1分钟最多5次登录尝试
 const loginLimiter = rateLimit({
@@ -364,4 +365,4 @@ router.post("/forget", async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

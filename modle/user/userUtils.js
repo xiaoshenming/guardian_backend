@@ -1,9 +1,11 @@
-// model/user/userUtils.js
-const db = require("../../config/db"); // 您的 db.js
-const redis = require("../../config/redis"); // 您的 redis.js
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-require("dotenv").config();
+// userUtils.js
+import db from "../../config/db.js"; // 您的 db.js
+import redis from "../../config/redis.js"; // 您的 redis.js
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const secret = process.env.JWT_SECRET;
 
@@ -204,7 +206,25 @@ async function checkJWTInRedisNew(userId, token, deviceType) {
   return storedToken === token;
 }
 
-module.exports = {
+export {
+  generateJWT,
+  saveJWTToRedis,
+  deleteJWTFromRedis,
+  saveJWTToRedisNew,
+  deleteJWTFromRedisNew,
+  checkJWTInRedisNew,
+  findUserByEmail,
+  findUserByLoginName,
+  findUserByPhone,
+  findUserById,
+  findUserProfileById,
+  createUser,
+  updateUserPassword,
+  verifyPassword,
+  updateLastLoginTime
+};
+
+export default {
   generateJWT,
   saveJWTToRedis,
   deleteJWTFromRedis,

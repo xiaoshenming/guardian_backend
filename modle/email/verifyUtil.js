@@ -1,6 +1,8 @@
-// 导入 nodemailer 模块
-const nodemailer = require('nodemailer');
-require('dotenv').config();
+// verifyUtil.js
+import nodemailer from 'nodemailer';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 // 创建邮件传输器
 const transporter = nodemailer.createTransport({
@@ -57,4 +59,4 @@ async function sendVerificationCode(email, type = 1) {
 }
 
 // 导出函数
-module.exports = sendVerificationCode;
+export default sendVerificationCode;

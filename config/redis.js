@@ -1,6 +1,8 @@
-// redis.js
-const Redis = require('ioredis');
-require("dotenv").config();
+// config/redis.js
+import Redis from 'ioredis';
+import dotenv from 'dotenv';
+
+dotenv.config();
 const HOST = process.env.Redis_HOST;
 const PORT = process.env.Redis_PORT;
 const PASSWORD = process.env.Redis_PASSWORD;
@@ -22,4 +24,4 @@ redis.on('error', (err) => {
     console.error('Redis 连接失败:', err);
 });
 
-module.exports = redis;
+export default redis;

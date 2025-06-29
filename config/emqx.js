@@ -1,8 +1,9 @@
 // config/emqx.js
-const mqtt = require("mqtt");
-require("dotenv").config(); // 确保 .env 文件被读取以加载配置
+import mqtt from "mqtt";
+import dotenv from "dotenv";
+import { getIo } from "./websockets.js"; // 引入 WebSocket 实例获取函数
 
-const { getIo } = require("./websockets"); // 引入 WebSocket 实例获取函数
+dotenv.config(); // 确保 .env 文件被读取以加载配置
 
 // 从环境变量中读取 MQTT Broker 连接详情
 const MQTT_HOST = process.env.MQTT_HOST; // MQTT 服务器 IP 地址
@@ -63,4 +64,4 @@ client.on("close", () => {
   console.log("MQTT 连接已关闭。");
 });
 
-module.exports = client; // 导出客户端供 heartbeat.js 和其他可能的模块使用
+export default client; // 导出客户端供 heartbeat.js 和其他可能的模块使用

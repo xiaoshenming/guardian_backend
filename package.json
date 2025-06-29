@@ -1,7 +1,8 @@
 {
   "name": "guardian_backend",
   "version": "1.0.0",
-  "main": "index.js",
+  "type": "module",
+  "main": "app.js",
   "scripts": {
     "serve": "nodemon app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -19,6 +20,7 @@
     "jsonwebtoken": "^9.0.2",
     "mqtt": "^5.13.1",
     "mysql2": "^3.14.1",
+    "nanoid": "^5.1.5",
     "nodemailer": "^7.0.3",
     "socket.io": "^4.8.1"
   }

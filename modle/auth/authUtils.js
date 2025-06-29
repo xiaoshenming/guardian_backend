@@ -1,7 +1,9 @@
-// modle\auth\authUtils.js
-const jwt = require('jsonwebtoken');
-const redis = require('../../config/redis');
-require('dotenv').config();
+// authUtils.js
+import jwt from 'jsonwebtoken';
+import redis from '../../config/redis.js';
+import dotenv from 'dotenv';
+
+dotenv.config();
 const secret = process.env.JWT_SECRET;
 
 // 定义一个辅助函数，用来检查 Redis 中的 JWT (新格式)
@@ -74,4 +76,4 @@ function authorize(roles = []) {
     };
 }
 
-module.exports = authorize;
+export default authorize;

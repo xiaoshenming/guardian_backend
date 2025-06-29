@@ -1,8 +1,9 @@
-// model/user/userRouter.js
-const express = require("express");
+// userRouters.js
+import express from "express";
+import userUtils from "./userUtils.js";
+import authorize from "../auth/authUtils.js"; // 您的授权中间件
+
 const router = express.Router();
-const userUtils = require("./userUtils");
-const authorize = require("../auth/authUtils"); // 您的授权中间件
 
 // 获取个人信息接口
 router.get("/info", authorize(), async (req, res) => {
@@ -151,4 +152,4 @@ router.get("/test/any-user", authorize(), async (req, res) => {
   });
 });
 
-module.exports = router;
+export default router;

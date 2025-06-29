@@ -1,21 +1,24 @@
 // app.js
-const express = require("express"); // 使用 Express 框架
-require("dotenv").config(); // 加载环境变量
-const cors = require("cors"); // 启用跨域支持
+import express from "express"; // 使用 Express 框架
+import dotenv from "dotenv"; // 加载环境变量
+import cors from "cors"; // 启用跨域支持
+import http from "http"; // 用于创建 HTTP 服务器
+
+dotenv.config(); // 加载环境变量
 const app = express(); // 创建 Express 实例
 const port = process.env.PORT || 3000; // 默认端口
-const http = require("http"); // 用于创建 HTTP 服务器
 const server = http.createServer(app); // 创建 HTTP 服务器
 
 // 导入路由
-const authRouter = require("./modle/auth/authRouters");
-const userRouter = require("./modle/user/userRouters");
-const emailRouter = require("./modle/email/verifyRoute");
-
+import authRouter from "./modle/auth/authRouters.js";
+import userRouter from "./modle/user/userRouters.js";
+import emailRouter from "./modle/email/verifyRoute.js";
+// 在这里添加下面这行
+import circleRouter from "./modle/guardian/circleRoute.js"; // 1. 导入守护圈路由
 // 2. 导入并初始化 WebSocket 服务
-// const { initWebSocket } = require("./config/websockets");
+// import { initWebSocket } from "./config/websockets.js";
 // initWebSocket(server);
-const { startHeartbeats } = require("./config/heartbeat"); // 启动心跳检测（Redis 与 MySQL）
+import { startHeartbeats } from "./config/heartbeat.js"; // 启动心跳检测（Redis 与 MySQL）
 
 // 中间件
 app.use(express.json()); // 解析 JSON 请求体
@@ -25,7 +28,7 @@ app.use(cors()); // 启用 CORS 中间件
 app.use("/api/auth", authRouter); // 认证相关路由
 app.use("/api/user", userRouter); // 用户相关路由
 app.use("/api/email", emailRouter); // 邮箱验证相关路由
-
+app.use("/api/guardian/circle", circleRouter); // 2. 使用守护圈路由，并设置基础路径
 // 根路径响应
 app.get("/", (req, res) => {
   res.json({

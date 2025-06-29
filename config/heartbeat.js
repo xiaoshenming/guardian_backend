@@ -1,10 +1,10 @@
 // config/heartbeat.js
-require("dotenv").config(); // 确保 .env 文件被读取
+import dotenv from "dotenv";
+import redis from "./redis.js";
+import db from "./db.js";
+// import mqttClient from "./emqx.js";
 
-// 路径调整：假设 db.js 和 redis.js 在项目根目录，heartbeat.js 在 config/ 目录下
-const redis = require("./redis");
-const db = require("./db");
-// const mqttClient = require("./emqx"); 
+dotenv.config(); // 确保 .env 文件被读取 
 
 const MQTT_CLIENT_ID = process.env.MQTT_CLIENT_ID;
 //从环境变量获取订阅给心跳使用
@@ -57,4 +57,4 @@ function startHeartbeats() {
   }, 300000); // 每 5 分钟
 }
 
-module.exports = { startHeartbeats };
+export { startHeartbeats };
