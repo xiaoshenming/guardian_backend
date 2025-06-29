@@ -111,5 +111,65 @@ router.delete('/:deviceId', authorize([1, 2]), async (req, res, next) => {
         next(error);
     }
 });
+/**
+ * @api {GET} /api/guardian/device/provisioning-info - [供硬件设备调用] 获取预配信息
+ * @description 此接口专为硬件设备（如Hi3516）设计。设备开机后，通过此接口查询自身是否已被用户绑定到某个守护圈，并获取关键的 `circle_id` 用于后续的 MQTT 通信。
+ * @header {string} Authorization - 专为设备设计的认证头。格式必须为: "Device-SN <your_device_sn>"
+ * @apiSuccess (200) {number} circle_id 设备所属的守护圈ID。
+ * @apiSuccess (200) {boolean} is_bound 设备是否已绑定。
+ * @apiError (404) {boolean} is_bound=false 设备未找到或未被任何用户绑定。
+ */
+router.get('/device/provisioning-info', async (req, res, next) => {
+    try {
+        const authHeader = req.headers.authorization;
 
+        // 1. 校验认证头格式
+        if (!authHeader || !authHeader.startsWith('Device-SN ')) {
+            return res.status(401).json({
+                code: 401,
+                message: '认证头缺失或格式不正确，期望格式: "Device-SN <SN>"',
+                data: null,
+                error: 'Unauthorized'
+            });
+        }
+
+        // 2. 提取设备 SN
+        const deviceSn = authHeader.split(' ')[1];
+        if (!deviceSn) {
+            return res.status(400).json({
+                code: 400,
+                message: '请求头中未提供设备SN',
+                data: null,
+                error: 'Bad Request'
+            });
+        }
+
+        // 3. 查询设备信息
+        const device = await deviceUtil.findDeviceBySn(deviceSn);
+
+        // 4. 根据查询结果返回不同信息
+        if (device && device.circle_id) {
+            // --- 场景一: 设备已找到，且已成功绑定到一个守护圈 ---
+            res.json({
+                code: 200,
+                message: '设备信息获取成功',
+                data: {
+                    circle_id: device.circle_id,
+                    is_bound: true
+                }
+            });
+        } else {
+            // --- 场景二: 设备在数据库中不存在，或存在但未绑定 (circle_id is NULL) ---
+            res.status(404).json({
+                code: 404,
+                message: '设备未绑定',
+                data: {
+                    is_bound: false
+                }
+            });
+        }
+    } catch (error) {
+        next(error); // 交给全局错误处理器
+    }
+});
 export default router;

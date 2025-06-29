@@ -133,7 +133,17 @@ async function unbindDeviceFromCircle(deviceId) {
     const [result] = await db.promise().query(query, [deviceId]);
     return result.affectedRows > 0;
 }
-
+/**
+ * @description 根据设备SN查找设备详情 (新增函数)
+ * @param {string} deviceSn - 设备的唯一序列号
+ * @returns {Promise<object|null>} 设备详情，包含关键的 circle_id
+ */
+async function findDeviceBySn(deviceSn) {
+    // 我们只需要查询最关键的信息，以提高效率
+    const query = 'SELECT id, device_sn, circle_id, device_status FROM device_info WHERE device_sn = ?';
+    const [rows] = await db.promise().query(query, [deviceSn]);
+    return rows[0] || null;
+}
 
 export default {
     bindDeviceToCircle,
@@ -141,4 +151,5 @@ export default {
     findDeviceById,
     updateDeviceInfo,
     unbindDeviceFromCircle,
+    findDeviceBySn,
 };
