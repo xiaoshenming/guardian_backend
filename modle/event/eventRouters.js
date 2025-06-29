@@ -327,7 +327,7 @@ router.put('/alerts/:alertId/acknowledge', authorize([1, 2, 3]), async (req, res
 });
 
 // 获取事件列表（通用接口，支持分页和状态筛选）
-router.get('/', authorize(), async (req, res) => {
+router.get('/list', authorize(), async (req, res) => {
   try {
     const { page = 1, pageSize = 10, status } = req.query;
     const userId = req.user.uid || req.user.id;
@@ -382,49 +382,6 @@ router.get('/', authorize(), async (req, res) => {
 });
 
 // 获取未处理事件数量（兼容前端调用）
-router.get('/pending-count', authorize(), async (req, res) => {
-  try {
-    const userId = req.user.uid || req.user.id;
-    
-    // 获取用户的所有守护圈
-    const userCircles = await circleUtils.getUserCircles(userId);
-    
-    if (userCircles.length === 0) {
-      return res.json({
-        code: 200,
-        message: '获取未处理事件数量成功',
-        data: {
-          count: 0
-        },
-        error: null
-      });
-    }
-    
-    // 获取用户所有守护圈的未处理事件数量
-    const circleIds = userCircles.map(circle => circle.id);
-    const count = await eventUtils.getUnhandledEventCount(circleIds);
-    
-    res.json({
-      code: 200,
-      message: '获取未处理事件数量成功',
-      data: {
-        count
-      },
-      error: null
-    });
-    
-  } catch (error) {
-    console.error('获取未处理事件数量错误:', error);
-    res.status(500).json({
-      code: 500,
-      message: '获取未处理事件数量失败',
-      data: null,
-      error: error.message
-    });
-  }
-});
-
-// 获取未处理事件数量
 router.get('/unhandled-count', authorize(), async (req, res) => {
   try {
     const userId = req.user.uid || req.user.id;
@@ -466,6 +423,8 @@ router.get('/unhandled-count', authorize(), async (req, res) => {
     });
   }
 });
+
+// 重复的路由已删除，使用上面的/unhandled-count路由
 
 // 处理单个事件
 router.post('/:eventId/handle', authorize(), async (req, res) => {
@@ -518,7 +477,7 @@ router.post('/:eventId/handle', authorize(), async (req, res) => {
 });
 
 // 批量处理事件
-router.post('/batch-handle', authorize(), async (req, res) => {
+router.post('/batch/handle', authorize(), async (req, res) => {
   try {
     const { ids, status, note } = req.body;
     const userId = req.user.uid || req.user.id;
@@ -557,10 +516,9 @@ router.post('/batch-handle', authorize(), async (req, res) => {
 });
 
 // 获取事件统计
-router.get('/stats/circle/:circleId', authorize([1, 2, 3]), async (req, res) => {
+router.get('/stats', authorize([1, 2, 3]), async (req, res) => {
   try {
-    const { circleId } = req.params;
-    const { period = 'today' } = req.query; // today, week, month
+    const { circleId, period = 'today' } = req.query; // today, week, month
     const userId = req.user.id;
 
     // 检查用户是否是该守护圈的成员

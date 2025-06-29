@@ -37,8 +37,7 @@ app.use("/api/user", userRouter); // 用户相关路由
 app.use("/api/email", emailRouter); // 邮箱验证相关路由
 app.use("/api/circle", circleRouter); // 守护圈相关路由
 app.use("/api/device", deviceRouter); // 设备相关路由
-app.use("/api/event", eventRouter); // 事件相关路由
-app.use("/api/events", eventRouter); // 事件相关路由（兼容前端调用）
+app.use("/api/events", eventRouter); // 事件相关路由
 app.use("/api/dashboard", dashboardRouter); // 仪表板相关路由
 app.use("/api/analytics", analyticsRouter); // 分析统计相关路由
 app.use("/api/admin", adminRouter); // 管理员相关路由
