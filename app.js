@@ -15,6 +15,8 @@ const circleRouter = require("./modle/circle/circleRouters");
 const deviceRouter = require("./modle/device/deviceRouters");
 const eventRouter = require("./modle/event/eventRouters");
 const dashboardRouter = require("./modle/dashboard/dashboardRouters");
+const analyticsRouter = require("./modle/analytics/analyticsRouters");
+const adminRouter = require("./modle/admin/adminRouters");
 
 // 导入服务
 const mqttService = require("./modle/mqtt/mqttService");
@@ -38,6 +40,8 @@ app.use("/api/device", deviceRouter); // 设备相关路由
 app.use("/api/event", eventRouter); // 事件相关路由
 app.use("/api/events", eventRouter); // 事件相关路由（兼容前端调用）
 app.use("/api/dashboard", dashboardRouter); // 仪表板相关路由
+app.use("/api/analytics", analyticsRouter); // 分析统计相关路由
+app.use("/api/admin", adminRouter); // 管理员相关路由
 
 // 根路径响应
 app.get("/", (req, res) => {
@@ -52,7 +56,10 @@ app.get("/", (req, res) => {
         email: "/api/email",
         circle: "/api/circle",
         device: "/api/device",
-        event: "/api/event"
+        event: "/api/event",
+        dashboard: "/api/dashboard",
+        analytics: "/api/analytics",
+        admin: "/api/admin"
       },
       services: {
         mqtt: mqttService.getStatus(),

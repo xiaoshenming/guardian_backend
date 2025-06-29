@@ -9,7 +9,7 @@ const createEvent = async (eventData) => {
     VALUES (?, ?, ?, ?, ?, NOW())
   `;
   
-  const result = await db.execute(query, [
+  const result = await db.promise().execute(query, [
     deviceId,
     circleId,
     eventType,
@@ -45,12 +45,13 @@ const getCircleEvents = async (circleId, options = {}) => {
   
   // 获取总数
   const countQuery = `
-    SELECT COUNT(*) as total
+    SELECT COUNT(DISTINCT e.id) as total
     FROM event_log e
+    ${joinClause}
     ${whereClause}
   `;
   
-  const countResult = await db.execute(countQuery, params);
+  const countResult = await db.promise().execute(countQuery, params);
   const total = countResult && countResult[0] && countResult[0][0] ? countResult[0][0].total : 0;
   
   // 获取事件列表
@@ -72,7 +73,7 @@ const getCircleEvents = async (circleId, options = {}) => {
   `;
   
   params.push(limit, offset);
-  const eventsResult = await db.execute(query, params);
+  const eventsResult = await db.promise().execute(query, params);
   const events = eventsResult && eventsResult[0] ? eventsResult[0] : [];
   
   // 解析事件数据
@@ -122,7 +123,7 @@ const getDeviceEvents = async (deviceId, options = {}) => {
     ${whereClause}
   `;
   
-  const countResult = await db.execute(countQuery, params);
+  const countResult = await db.promise().execute(countQuery, params);
   const countData = countResult && countResult[0] && countResult[0][0] ? countResult[0][0] : { total: 0 };
   const total = countData.total;
   
@@ -141,7 +142,7 @@ const getDeviceEvents = async (deviceId, options = {}) => {
   `;
   
   params.push(limit, offset);
-  const eventsResult = await db.execute(query, params);
+  const eventsResult = await db.promise().execute(query, params);
   const events = eventsResult && eventsResult[0] ? eventsResult[0] : [];
   
   // 解析事件数据
@@ -182,7 +183,7 @@ const getEventDetail = async (eventId) => {
     WHERE e.id = ?
   `;
   
-  const result = await db.execute(query, [eventId]);
+  const result = await db.promise().execute(query, [eventId]);
   const events = result && result[0] ? result[0] : [];
   
   if (!events || events.length === 0) {
@@ -272,7 +273,7 @@ const generateAlert = async (alertData) => {
     VALUES (?, ?, ?, ?, 0, NOW())
   `;
   
-  const insertResult = await db.execute(query, [
+  const insertResult = await db.promise().execute(query, [
     eventId,
     circleId,
     alertLevel,
@@ -307,7 +308,7 @@ const getCircleAlerts = async (circleId, options = {}) => {
     ${whereClause}
   `;
   
-  const [countResult] = await db.execute(countQuery, params);
+  const [countResult] = await db.promise().execute(countQuery, params);
   const total = countResult[0].total;
   
   // 获取告警列表
@@ -336,7 +337,7 @@ const getCircleAlerts = async (circleId, options = {}) => {
   `;
   
   params.push(limit, offset);
-  const alertsResult = await db.execute(query, params);
+  const alertsResult = await db.promise().execute(query, params);
   const alerts = alertsResult && alertsResult[0] ? alertsResult[0] : [];
   
   return {
@@ -366,7 +367,7 @@ const getAlertById = async (alertId) => {
     WHERE a.id = ?
   `;
   
-  const alertsResult = await db.execute(query, [alertId]);
+  const alertsResult = await db.promise().execute(query, [alertId]);
   const alerts = alertsResult && alertsResult[0] ? alertsResult[0] : [];
   
   if (alerts.length === 0) {
@@ -388,7 +389,7 @@ const acknowledgeAlert = async (alertId, userId) => {
     WHERE id = ?
   `;
   
-  await db.execute(query, [userId, alertId]);
+  await db.promise().execute(query, [userId, alertId]);
 };
 
 // 获取事件统计
@@ -418,7 +419,7 @@ const getEventStats = async (circleId, period = 'today') => {
     ORDER BY count DESC
   `;
   
-  const eventTypeResult = await db.execute(eventTypeQuery, [circleId]);
+  const eventTypeResult = await db.promise().execute(eventTypeQuery, [circleId]);
   const eventTypeStats = eventTypeResult && eventTypeResult[0] ? eventTypeResult[0] : [];
   
   // 告警级别统计
@@ -433,7 +434,7 @@ const getEventStats = async (circleId, period = 'today') => {
     GROUP BY a.alert_level
   `;
   
-  const alertLevelResult = await db.execute(alertLevelQuery, [circleId]);
+  const alertLevelResult = await db.promise().execute(alertLevelQuery, [circleId]);
   const alertLevelStats = alertLevelResult && alertLevelResult[0] ? alertLevelResult[0] : [];
   
   // 设备活跃度统计
@@ -450,7 +451,7 @@ const getEventStats = async (circleId, period = 'today') => {
     ORDER BY event_count DESC
   `;
   
-  const deviceActivityResult = await db.execute(deviceActivityQuery, [circleId]);
+  const deviceActivityResult = await db.promise().execute(deviceActivityQuery, [circleId]);
   const deviceActivityStats = deviceActivityResult && deviceActivityResult[0] ? deviceActivityResult[0] : [];
   
   // 总体统计
@@ -465,7 +466,7 @@ const getEventStats = async (circleId, period = 'today') => {
     WHERE e.circle_id = ? ${dateCondition}
   `;
   
-  const overallResult = await db.execute(overallQuery, [circleId]);
+  const overallResult = await db.promise().execute(overallQuery, [circleId]);
   const overallStats = overallResult && overallResult[0] ? overallResult[0] : [];
   
   return {
@@ -489,7 +490,7 @@ const getAlertStats = async (circleId) => {
     WHERE circle_id = ?
   `;
   
-  const result = await db.execute(query, [circleId]);
+  const result = await db.promise().execute(query, [circleId]);
   return result && result[0] && result[0][0] ? result[0][0] : {
     urgent_today: 0,
     urgent_week: 0,
@@ -534,7 +535,7 @@ const getRecentEvents = async (options = {}) => {
   `;
   
   params.push(limit);
-  const result = await db.execute(query, params);
+  const result = await db.promise().execute(query, params);
   const events = result && result[0] ? result[0] : [];
   
   // 解析事件数据
@@ -554,18 +555,27 @@ const getAllEvents = async (options = {}) => {
   }
   
   const placeholders = circleIds.map(() => '?').join(',');
-  let whereClause = `WHERE a.circle_id IN (${placeholders})`;
+  let whereClause = `WHERE e.circle_id IN (${placeholders})`;
   let params = [...circleIds];
   
+  // 根据status参数决定是否需要关联alert_log表
+  let joinClause = '';
   if (status !== undefined) {
-    whereClause += ' AND a.status = ?';
-    params.push(status);
+    if (status === 0) {
+      // 待处理：事件存在但没有对应的已处理告警
+      joinClause = 'LEFT JOIN alert_log a ON e.id = a.event_id';
+      whereClause += ' AND (a.id IS NULL OR a.status = 0)';
+    } else if (status === 1) {
+      // 已处理：事件有对应的已处理告警
+      joinClause = 'INNER JOIN alert_log a ON e.id = a.event_id';
+      whereClause += ' AND a.status IN (2, 3)';
+    }
   }
   
   // 获取总数
   const countQuery = `
     SELECT COUNT(*) as total
-    FROM alert_log a
+    FROM event_log e
     ${whereClause}
   `;
   
@@ -574,31 +584,28 @@ const getAllEvents = async (options = {}) => {
   
   // 获取列表数据
   const listQuery = `
-    SELECT 
-      a.id,
-      a.event_id,
-      a.circle_id,
-      a.alert_level,
-      a.alert_content,
-      a.status,
-      a.acknowledged_by_uid,
-      a.acknowledged_time,
-      a.create_time,
-      c.circle_name as circle_name,
+    SELECT DISTINCT
+      e.id,
+      e.device_id,
+      e.circle_id,
       e.event_type,
       e.event_data,
+      e.event_time,
+      e.create_time,
+      c.circle_name as circle_name,
       d.device_name,
-      d.device_sn
-    FROM alert_log a
-    LEFT JOIN guardian_circle c ON a.circle_id = c.id
-    LEFT JOIN event_log e ON a.event_id = e.id
+      d.device_sn,
+      COALESCE(a.status, 0) as status
+    FROM event_log e
+    ${joinClause}
+    LEFT JOIN guardian_circle c ON e.circle_id = c.id
     LEFT JOIN device_info d ON e.device_id = d.id
     ${whereClause}
-    ORDER BY a.create_time DESC
+    ORDER BY e.event_time DESC
     LIMIT ? OFFSET ?
   `;
   
-  const [listResult] = await db.execute(listQuery, [...params, limit, offset]);
+  const [listResult] = await db.promise().execute(listQuery, [...params, limit, offset]);
   
   return {
     list: listResult || [],
@@ -616,7 +623,7 @@ const handleAlert = async (alertId, userId, options = {}) => {
     WHERE id = ?
   `;
   
-  const [result] = await db.execute(query, [userId, alertId]);
+  const [result] = await db.promise().execute(query, [userId, alertId]);
   return result.affectedRows > 0;
 };
 
@@ -648,14 +655,14 @@ const batchHandleAlerts = async (alertIds, userId, options = {}) => {
   return { processed, failed };
 };
 
-// 获取未处理事件数量
+// 获取未处理事件数量 (修复后)
 const getUnhandledEventCount = async (circleIds) => {
   if (!circleIds || circleIds.length === 0) {
     return 0;
   }
-  
+
   const placeholders = circleIds.map(() => '?').join(',');
-  
+
   const query = `
     SELECT COUNT(*) as count
     FROM alert_log a
@@ -663,9 +670,29 @@ const getUnhandledEventCount = async (circleIds) => {
     AND a.status = 0
     AND a.create_time >= CURDATE()
   `;
-  
-  const [result] = await db.execute(query, circleIds);
-  return result && result[0] ? result[0].count : 0;
+
+  // --- 修复开始 ---
+  try {
+    // 1. 先将查询结果完整接收，而不是立即解构
+    const queryResult = await db.promise().execute(query, circleIds);
+
+    // 2. 增加一个健壮性检查，确保返回的是一个数组且至少有一个元素（即 rows）
+    if (!queryResult || !Array.isArray(queryResult) || queryResult.length === 0) {
+      console.error("数据库查询 getUnhandledEventCount 返回了意外的格式:", queryResult);
+      return 0; // 返回默认值，防止程序崩溃
+    }
+
+    // 3. 安全地进行解构
+    const [result] = queryResult;
+
+    // 4. 返回结果
+    return result && result[0] ? result[0].count : 0;
+  } catch (error) {
+    console.error("执行 getUnhandledEventCount 查询时出错:", error);
+    // 在生产环境中，这里应该向上抛出错误或返回一个表示失败的特定值
+    return 0; // 或者 throw error;
+  }
+  // --- 修复结束 ---
 };
 
 module.exports = {
