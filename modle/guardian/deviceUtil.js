@@ -10,6 +10,12 @@ import db from "../../config/db.js";
 async function bindDeviceToCircle(deviceData, circleId, boundByUid) {
     const { device_sn, device_name, device_model, config } = deviceData;
 
+    // --- 修复点：在这里对 config 进行 JSON 格式化 ---
+    // 确保无论 config 是一个对象还是未定义，都能安全地存入数据库
+    // 如果 config 存在，则将其字符串化；如果不存在，则使用 null，这会被数据库正确地存为 NULL
+    const configJson = config ? JSON.stringify(config) : null;
+    // --- 修复结束 ---
+
     // 1. 检查设备SN是否已经被其他圈子绑定
     const [existingDevices] = await db.promise().query('SELECT id, circle_id FROM device_info WHERE device_sn = ?', [device_sn]);
     if (existingDevices.length > 0 && existingDevices[0].circle_id !== null) {
@@ -18,24 +24,25 @@ async function bindDeviceToCircle(deviceData, circleId, boundByUid) {
         throw error;
     }
 
-    // 如果设备存在但未绑定 (circle_id is NULL)，则更新它；否则，插入新记录
     let deviceId;
     if (existingDevices.length > 0) {
         // 更新现有未绑定的设备
         deviceId = existingDevices[0].id;
         const updateQuery = `
-            UPDATE device_info 
-            SET device_name = ?, circle_id = ?, bound_by_uid = ?, device_status = 1, last_heartbeat = NOW()
+            UPDATE device_info
+            SET device_name = ?, circle_id = ?, bound_by_uid = ?, device_status = 1, config = ?, last_heartbeat = NOW()
             WHERE id = ?
         `;
-        await db.promise().query(updateQuery, [device_name, circleId, boundByUid, deviceId]);
+        // 在 UPDATE 查询中也使用格式化后的 configJson
+        await db.promise().query(updateQuery, [device_name, circleId, boundByUid, configJson, deviceId]);
     } else {
         // 插入全新设备
         const insertQuery = `
-            INSERT INTO device_info (device_sn, device_name, device_model, config, circle_id, bound_by_uid, device_status, last_heartbeat) 
+            INSERT INTO device_info (device_sn, device_name, device_model, config, circle_id, bound_by_uid, device_status, last_heartbeat)
             VALUES (?, ?, ?, ?, ?, ?, 1, NOW())
         `;
-        const [result] = await db.promise().query(insertQuery, [device_sn, device_name, device_model, config, circleId, boundByUid]);
+        // 在 INSERT 查询中使用格式化后的 configJson
+        const [result] = await db.promise().query(insertQuery, [device_sn, device_name, device_model, configJson, circleId, boundByUid]);
         deviceId = result.insertId;
     }
 
