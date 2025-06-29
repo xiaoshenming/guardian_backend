@@ -87,7 +87,7 @@ router.get('/circle/:circleId', authorize([1, 2, 3]), async (req, res) => {
   try {
     const { circleId } = req.params;
     const { page = 1, limit = 20, eventType, startDate, endDate } = req.query;
-    const userId = req.user.uid;
+    const userId = req.user.id;
 
     // 检查用户是否是该守护圈的成员
     const membership = await circleUtils.checkMembership(circleId, userId);
@@ -132,7 +132,7 @@ router.get('/device/:deviceId', authorize([1, 2, 3]), async (req, res) => {
   try {
     const { deviceId } = req.params;
     const { page = 1, limit = 20, eventType, startDate, endDate } = req.query;
-    const userId = req.user.uid;
+    const userId = req.user.id;
 
     // 获取设备信息
     const device = await deviceUtils.getDeviceById(deviceId);
@@ -238,7 +238,7 @@ router.get('/alerts/circle/:circleId', authorize([1, 2, 3]), async (req, res) =>
   try {
     const { circleId } = req.params;
     const { page = 1, limit = 20, status, alertLevel } = req.query;
-    const userId = req.user.uid;
+    const userId = req.user.id;
 
     // 检查用户是否是该守护圈的成员
     const membership = await circleUtils.checkMembership(circleId, userId);
@@ -281,7 +281,7 @@ router.get('/alerts/circle/:circleId', authorize([1, 2, 3]), async (req, res) =>
 router.put('/alerts/:alertId/acknowledge', authorize([1, 2, 3]), async (req, res) => {
   try {
     const { alertId } = req.params;
-    const userId = req.user.uid;
+    const userId = req.user.id;
 
     // 获取告警信息
     const alert = await eventUtils.getAlertById(alertId);
@@ -561,7 +561,7 @@ router.get('/stats/circle/:circleId', authorize([1, 2, 3]), async (req, res) => 
   try {
     const { circleId } = req.params;
     const { period = 'today' } = req.query; // today, week, month
-    const userId = req.user.uid;
+    const userId = req.user.id;
 
     // 检查用户是否是该守护圈的成员
     const membership = await circleUtils.checkMembership(circleId, userId);
@@ -599,7 +599,7 @@ router.get('/stats/circle/:circleId', authorize([1, 2, 3]), async (req, res) => 
 router.get('/:eventId', authorize([1, 2, 3]), async (req, res) => {
   try {
     const { eventId } = req.params;
-    const userId = req.user.uid;
+    const userId = req.user.id;
 
     // 获取事件详情
     const event = await eventUtils.getEventDetail(eventId);

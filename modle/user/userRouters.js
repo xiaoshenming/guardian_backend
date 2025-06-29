@@ -8,7 +8,6 @@ const authorize = require("../auth/authUtils"); // 您的授权中间件
 router.get("/info", authorize(), async (req, res) => {
   try {
     const userId = req.user.id;
-    const userUid = req.user.uid || userId; // 兼容处理
 
     // 获取登录信息
     const loginInfo = await userUtils.findUserById(userId);
@@ -154,7 +153,7 @@ router.get("/test/any-user", authorize(), async (req, res) => {
 // 获取用户仪表板统计信息
 router.get("/dashboard-stats", authorize(), async (req, res) => {
   try {
-    const userId = req.user.uid || req.user.id;
+    const userId = req.user.id;
     
     // 导入需要的工具模块
     const circleUtils = require("../circle/circleUtils");

@@ -16,7 +16,7 @@ const deviceLimiter = rateLimit({
 router.post('/bind', authorize([1, 2, 3]), deviceLimiter, async (req, res) => {
   try {
     const { deviceSn, deviceName, circleId } = req.body;
-    const userId = req.user.uid;
+    const userId = req.user.id;
 
     if (!deviceSn || !circleId) {
       return res.status(400).json({
@@ -84,7 +84,7 @@ router.post('/bind', authorize([1, 2, 3]), deviceLimiter, async (req, res) => {
 router.get('/circle/:circleId', authorize([1, 2, 3]), async (req, res) => {
   try {
     const { circleId } = req.params;
-    const userId = req.user.uid;
+    const userId = req.user.id;
 
     // 检查用户是否是该守护圈的成员
     const membership = await circleUtils.checkMembership(circleId, userId);
@@ -122,7 +122,7 @@ router.get('/circle/:circleId', authorize([1, 2, 3]), async (req, res) => {
 router.get('/:deviceId', authorize([1, 2, 3]), async (req, res) => {
   try {
     const { deviceId } = req.params;
-    const userId = req.user.uid;
+    const userId = req.user.id;
 
     // 获取设备信息
     const device = await deviceUtils.getDeviceById(deviceId);
@@ -172,7 +172,7 @@ router.put('/:deviceId/config', authorize([1, 2, 3]), async (req, res) => {
   try {
     const { deviceId } = req.params;
     const { deviceName, config } = req.body;
-    const userId = req.user.uid;
+    const userId = req.user.id;
 
     // 获取设备信息
     const device = await deviceUtils.getDeviceById(deviceId);
@@ -224,7 +224,7 @@ router.put('/:deviceId/config', authorize([1, 2, 3]), async (req, res) => {
 router.delete('/:deviceId', authorize([1, 2, 3]), async (req, res) => {
   try {
     const { deviceId } = req.params;
-    const userId = req.user.uid;
+    const userId = req.user.id;
 
     // 获取设备信息
     const device = await deviceUtils.getDeviceById(deviceId);
@@ -305,7 +305,7 @@ router.post('/:deviceSn/heartbeat', async (req, res) => {
 router.get('/circle/:circleId/stats', authorize([1, 2, 3]), async (req, res) => {
   try {
     const { circleId } = req.params;
-    const userId = req.user.uid;
+    const userId = req.user.id;
 
     // 检查用户是否是该守护圈的成员
     const membership = await circleUtils.checkMembership(circleId, userId);

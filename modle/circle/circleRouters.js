@@ -15,7 +15,7 @@ const createCircleLimiter = rateLimit({
 router.post('/create', authorize([1, 2, 3]), createCircleLimiter, async (req, res) => {
   try {
     const { circleName, description } = req.body;
-    const creatorUid = req.user.uid;
+    const creatorUid = req.user.id;
 
     if (!circleName) {
       return res.status(400).json({
@@ -66,7 +66,7 @@ router.post('/create', authorize([1, 2, 3]), createCircleLimiter, async (req, re
 // 获取用户的守护圈列表
 router.get('/list', authorize([1, 2, 3]), async (req, res) => {
   try {
-    const userId = req.user.uid;
+    const userId = req.user.id;
     const circles = await circleUtils.getUserCircles(userId);
 
     res.json({
@@ -91,7 +91,7 @@ router.get('/list', authorize([1, 2, 3]), async (req, res) => {
 router.post('/join', authorize([1, 2, 3]), async (req, res) => {
   try {
     const { circleCode, memberAlias } = req.body;
-    const userId = req.user.uid;
+    const userId = req.user.id;
 
     if (!circleCode) {
       return res.status(400).json({
@@ -149,10 +149,10 @@ router.post('/join', authorize([1, 2, 3]), async (req, res) => {
 });
 
 // 获取守护圈详情
-router.get('/:circleId', authorize([1, 2, 3]), async (req, res) => {
+router.get('/detail/:circleId', authorize([1, 2, 3]), async (req, res) => {
   try {
     const { circleId } = req.params;
-    const userId = req.user.uid;
+    const userId = req.user.id;
 
     // 检查用户是否是该守护圈的成员
     const membership = await circleUtils.checkMembership(circleId, userId);
@@ -190,7 +190,7 @@ router.get('/:circleId', authorize([1, 2, 3]), async (req, res) => {
 router.get('/:circleId/members', authorize([1, 2, 3]), async (req, res) => {
   try {
     const { circleId } = req.params;
-    const userId = req.user.uid;
+    const userId = req.user.id;
 
     // 检查用户是否是该守护圈的成员
     const membership = await circleUtils.checkMembership(circleId, userId);
@@ -224,12 +224,12 @@ router.get('/:circleId/members', authorize([1, 2, 3]), async (req, res) => {
   }
 });
 
-// 更新成员角色（仅圈主可操作）
+// 更新成员角色
 router.put('/:circleId/members/:memberId/role', authorize([1, 2, 3]), async (req, res) => {
   try {
     const { circleId, memberId } = req.params;
     const { memberRole, memberAlias } = req.body;
-    const userId = req.user.uid;
+    const userId = req.user.id;
 
     // 检查操作者是否是圈主
     const operatorMembership = await circleUtils.checkMembership(circleId, userId);
@@ -263,11 +263,11 @@ router.put('/:circleId/members/:memberId/role', authorize([1, 2, 3]), async (req
   }
 });
 
-// 移除成员（仅圈主可操作）
+// 移除成员
 router.delete('/:circleId/members/:memberId', authorize([1, 2, 3]), async (req, res) => {
   try {
     const { circleId, memberId } = req.params;
-    const userId = req.user.uid;
+    const userId = req.user.id;
 
     // 检查操作者是否是圈主
     const operatorMembership = await circleUtils.checkMembership(circleId, userId);
@@ -316,7 +316,7 @@ router.put('/:circleId', authorize([1, 2, 3]), async (req, res) => {
   try {
     const { circleId } = req.params;
     const { circleName, description } = req.body;
-    const userId = req.user.uid;
+    const userId = req.user.id;
 
     // 检查操作者是否是圈主
     const operatorMembership = await circleUtils.checkMembership(circleId, userId);
@@ -350,11 +350,11 @@ router.put('/:circleId', authorize([1, 2, 3]), async (req, res) => {
   }
 });
 
-// 删除守护圈（仅圈主可操作）
+// 删除守护圈
 router.delete('/:circleId', authorize([1, 2, 3]), async (req, res) => {
   try {
     const { circleId } = req.params;
-    const userId = req.user.uid;
+    const userId = req.user.id;
 
     // 检查操作者是否是圈主
     const operatorMembership = await circleUtils.checkMembership(circleId, userId);
@@ -392,7 +392,7 @@ router.delete('/:circleId', authorize([1, 2, 3]), async (req, res) => {
 router.post('/:circleId/leave', authorize([1, 2, 3]), async (req, res) => {
   try {
     const { circleId } = req.params;
-    const userId = req.user.uid;
+    const userId = req.user.id;
 
     // 检查用户是否是该守护圈的成员
     const membership = await circleUtils.checkMembership(circleId, userId);
