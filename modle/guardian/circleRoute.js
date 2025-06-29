@@ -2,6 +2,8 @@
 import express from 'express';
 import authorize from '../auth/authUtils.js'; // 引入鉴权中间件
 import circleUtil from './circleUtil.js';
+import deviceUtil from './deviceUtil.js';
+import memberUtil from './memberUtil.js';
 
 const router = express.Router();
 
@@ -183,6 +185,33 @@ router.delete('/:id', authorize([1, 2]), async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+});
+
+
+/**
+ * @api {GET} /api/guardian/circle/:circleId/devices - 获取圈内所有设备
+ * @description 获取指定守护圈下绑定的所有设备列表。
+ * @permission 圈内成员
+ */
+router.get('/:circleId/devices', authorize([1, 2]), async (req, res, next) => {
+    try {
+        const { circleId } = req.params;
+        const { id: userId, role } = req.user;
+
+        // 权限验证：必须是圈内成员或管理员
+        if (role < 2) {
+            const membership = await memberUtil.getMembership(userId, circleId);
+            if (!membership) {
+                return res.status(403).json({ code: 403, message: '权限不足，您不是该守护圈的成员', data: null, error: null });
+            }
+        }
+
+        const devices = await deviceUtil.findDevicesByCircleId(circleId);
+        res.json({ code: 200, message: '获取设备列表成功', data: devices, error: null });
+
+    } catch (error) {
+        next(error);
+    }
 });
 
 

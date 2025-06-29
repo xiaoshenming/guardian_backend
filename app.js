@@ -16,6 +16,7 @@ import emailRouter from "./modle/email/verifyRoute.js";
 // 在这里添加下面这行
 import circleRouter from "./modle/guardian/circleRoute.js"; // 1. 导入守护圈路由
 import memberRouter from "./modle/guardian/memberRoute.js"; // 1. 导入成员管理路由
+import deviceRouter from "./modle/guardian/deviceRoute.js"; // 1. 导入设备管理路由
 // 2. 导入并初始化 WebSocket 服务
 // import { initWebSocket } from "./config/websockets.js";
 // initWebSocket(server);
@@ -31,6 +32,7 @@ app.use("/api/user", userRouter); // 用户相关路由
 app.use("/api/email", emailRouter); // 邮箱验证相关路由
 app.use("/api/guardian/circle", circleRouter); // 2. 使用守护圈路由，并设置基础路径
 app.use("/api/guardian/member", memberRouter); // 2. 使用成员管理路由，并设置基础路径
+app.use("/api/guardian/device", deviceRouter); // 2. 使用设备管理路由，并设置基础路径
 // 根路径响应
 app.get("/", (req, res) => {
   res.json({
