@@ -23,8 +23,8 @@ import smartHomeDeviceRouter from "./modle/guardian/smartHomeDeviceRoute.js";
 import actionRuleRouter from "./modle/guardian/actionRuleRoute.js";
 
 // 2. 导入并初始化 WebSocket 服务
-// import { initWebSocket } from "./config/websockets.js";
-// initWebSocket(server);
+import { initWebSocket } from "./config/websockets.js";
+initWebSocket(server);
 import { startHeartbeats } from "./config/heartbeat.js"; // 启动心跳检测（Redis 与 MySQL）
 import { initMqtt } from './modle/guardian/mqttHandler.js'; // 1. 导入 MQTT 初始化函数
 // 中间件
@@ -39,8 +39,8 @@ app.use("/api/guardian/circle", circleRouter); // 2. 使用守护圈路由，并
 app.use("/api/guardian/member", memberRouter); // 2. 使用成员管理路由，并设置基础路径
 app.use("/api/guardian/device", deviceRouter); // 2. 使用设备管理路由，并设置基础路径
 
-app.use("/api/guardian", eventRouter);
-app.use("/api/guardian", alertRouter);
+app.use('/api/guardian/events', eventRouter); // 3. 使用事件路由
+app.use('/api/guardian/alerts', alertRouter); // 4. 使用告警路由
 app.use("/api/guardian", smartHomeDeviceRouter);
 app.use("/api/guardian", actionRuleRouter);
 // 根路径响应

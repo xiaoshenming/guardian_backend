@@ -3,6 +3,7 @@ import mqtt from 'mqtt';
 import deviceUtil from './deviceUtil.js';
 import eventUtil from './eventUtil.js';
 import alertUtil from './alertUtil.js';
+import { getIo } from '../../config/websockets.js'; // 引入 WebSocket 实例
 import db from '../../config/db.js';
 // 以后会用到
 // import actionRuleUtil from './actionRuleUtil.js';
@@ -52,29 +53,30 @@ export function initMqtt() {
         const [, , , circleId, deviceSn, messageType] = topicParts;
 
         try {
-            const data = JSON.parse(payload.toString());
-
-            // 1. 安全校验 (简易版，生产环境应更复杂)
-            // 假设我们有一个按SN查找的函数 findDeviceBySn
-            const device = await db.promise().query('SELECT * FROM device_info WHERE device_sn = ? AND circle_id = ?', [deviceSn, circleId]).then(([rows])=>rows[0]);
-            if (!device) {
-                console.warn(`[MQTT] 警告: 收到来自未授权设备的消息. SN: ${deviceSn}, Circle: ${circleId}`);
+            // 1. 安全校验：设备是否存在且属于该守护圈
+            const device = await deviceUtil.findDeviceBySn(deviceSn);
+            if (!device || device.circle_id !== parseInt(circleId)) {
+                console.warn(`[MQTT-Security] 警告: 收到来自未授权或圈ID不匹配设备的消息. SN: ${deviceSn}, Topic-Circle: ${circleId}`);
                 return;
             }
+            const data = JSON.parse(payload.toString());
 
             // 2. 根据消息类型进行路由
             switch (messageType) {
                 case 'event':
-                    console.log(`[Event] 设备: ${device.device_name}, SN: ${device.device_sn}, 发送了事件: ${data.event_type}`);
+                    console.log(`[MQTT-Event] 设备: ${device.device_name}, 事件: ${data.event_type}`);
                     await handleEventMessage(device, data);
                     break;
                 case 'heartbeat':
-                    console.log(`[Heartbeat] 设备: ${device.device_name}, SN: ${device.device_sn}, 已发送心跳`);
-                    // await handleHeartbeatMessage(device, data);
+                    console.log(`[MQTT-Heartbeat] 设备: ${device.device_name} 发送心跳`);
+                    await deviceUtil.updateDeviceHeartbeat(device.device_sn, data.firmware_version);
+                    break;
+                case 'state':
+                    console.log(`[MQTT-State] 设备: ${device.device_name} 上报状态`);
+                    await handleStateMessage(device, data);
                     break;
                 default:
                     console.warn(`[MQTT] 警告: 未知的消息类型: ${messageType}`);
-                // ... 其他 case
             }
         } catch (error) {
             console.error(`[MQTT] 处理消息时出错: ${error.message}`);
@@ -87,30 +89,60 @@ export function initMqtt() {
 }
 
 async function handleEventMessage(device, eventPayload) {
-    // 1. 记录事件日志
-    const eventLog = await eventUtil.createEventLog({
+    const eventTime = eventPayload.timestamp ? new Date(eventPayload.timestamp * 1000) : new Date();
+
+    const eventLogData = {
         device_id: device.id,
         circle_id: device.circle_id,
         event_type: eventPayload.event_type,
         event_data: eventPayload.event_data,
-        event_time: new Date(eventPayload.timestamp)
-    });
-    console.log(`[Event] 已记录新事件, ID: ${eventLog.id}`);
+        event_time: eventTime
+    };
 
-    // 2. 判断是否需要生成告警 (业务逻辑)
-    const highPriorityEvents = ['fall_detection', 'sos_alert', 'stranger_detected'];
-    if (highPriorityEvents.includes(eventPayload.event_type)) {
+    // 1. 记录事件日志
+    const eventLog = await eventUtil.createEventLog(eventLogData);
+    console.log(`[Event] 已记录新事件, LogID: ${eventLog.id}`);
+
+    // 通过 WebSocket 推送新事件到前端
+    const io = getIo();
+    io.to(`circle_${device.circle_id}`).emit('new_event', eventLog);
+
+
+    // 2. 判断是否需要生成告警
+    const highPriorityEvents = {
+        'fall_detection': { level: 1, content: '检测到摔倒事件' },
+        'sos_alert': { level: 1, content: '收到SOS紧急求助' },
+        'stranger_detected': { level: 2, content: '检测到陌生人靠近' }
+    };
+
+    if (highPriorityEvents[eventPayload.event_type]) {
+        const alertInfo = highPriorityEvents[eventPayload.event_type];
         const alert = await alertUtil.createAlert({
             event_id: eventLog.id,
             circle_id: device.circle_id,
-            alert_level: 1, // 1: 紧急
-            alert_content: `设备"${device.device_name}"上报紧急事件: ${eventPayload.event_type}`
+            alert_level: alertInfo.level,
+            alert_content: `设备"${device.device_name}"上报: ${alertInfo.content}`
         });
-        console.log(`[Alert] 已生成新告警, ID: ${alert.id}. 需要推送通知!`);
-        // 在这里触发推送、短信等通知...
+        console.log(`[Alert] 已生成新告警, AlertID: ${alert.id}. 需要推送通知!`);
+        // 通过 WebSocket 推送新告警到前端
+        io.to(`circle_${device.circle_id}`).emit('new_alert', alert);
+        // 在这里还可以触发短信、电话等其他通知服务
     }
 
     // 3. 检查并执行自动化规则 (未来)
     // const rules = await actionRuleUtil.findRulesByCircleId(device.circle_id);
     // ... 匹配规则并执行 ...
+}
+async function handleStateMessage(device, statePayload) {
+    // 1. 更新数据库中设备的 config 字段
+    await deviceUtil.updateDeviceState(device.device_sn, statePayload.state);
+    console.log(`[State] 已更新设备 ${device.device_sn} 的状态到数据库`);
+
+    // 2. 通过 WebSocket 将最新状态推送到前端
+    const io = getIo();
+    const message = {
+        deviceId: device.id,
+        state: statePayload.state
+    };
+    io.to(`circle_${device.circle_id}`).emit('device_state_update', message);
 }

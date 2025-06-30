@@ -133,17 +133,62 @@ async function unbindDeviceFromCircle(deviceId) {
     const [result] = await db.promise().query(query, [deviceId]);
     return result.affectedRows > 0;
 }
+// /**
+//  * @description 根据设备SN查找设备详情 (新增函数)
+//  * @param {string} deviceSn - 设备的唯一序列号
+//  * @returns {Promise<object|null>} 设备详情，包含关键的 circle_id
+//  */
+// async function findDeviceBySn(deviceSn) {
+//     // 我们只需要查询最关键的信息，以提高效率
+//     const query = 'SELECT id, device_sn, circle_id, device_status FROM device_info WHERE device_sn = ?';
+//     const [rows] = await db.promise().query(query, [deviceSn]);
+//     return rows[0] || null;
+// }
+
 /**
- * @description 根据设备SN查找设备详情 (新增函数)
- * @param {string} deviceSn - 设备的唯一序列号
- * @returns {Promise<object|null>} 设备详情，包含关键的 circle_id
+ * @description (内部使用) 通过 SN 查找设备，这是 MQTT 处理器验证设备合法性的关键
+ * @param {string} deviceSn - 设备序列号
+ * @returns {Promise<object|null>}
  */
 async function findDeviceBySn(deviceSn) {
-    // 我们只需要查询最关键的信息，以提高效率
-    const query = 'SELECT id, device_sn, circle_id, device_status FROM device_info WHERE device_sn = ?';
+    const query = 'SELECT * FROM device_info WHERE device_sn = ?';
     const [rows] = await db.promise().query(query, [deviceSn]);
     return rows[0] || null;
 }
+
+
+/**
+ * @description (内部使用) 更新设备的心跳和在线状态
+ * @param {string} deviceSn - 设备序列号
+ * @param {string} firmwareVersion - 从心跳包中获取的固件版本
+ * @returns {Promise<boolean>}
+ */
+async function updateDeviceHeartbeat(deviceSn, firmwareVersion) {
+    const query = `
+        UPDATE device_info 
+        SET 
+            last_heartbeat = NOW(), 
+            device_status = 1,  -- 1: 在线
+            firmware_version = ?
+        WHERE device_sn = ?
+    `;
+    const [result] = await db.promise().query(query, [firmwareVersion, deviceSn]);
+    return result.affectedRows > 0;
+}
+
+/**
+ * @description (内部使用) 更新设备的状态配置 (config 字段)
+ * @param {string} deviceSn - 设备序列号
+ * @param {object} stateData - 从 state 消息中收到的状态对象
+ * @returns {Promise<boolean>}
+ */
+async function updateDeviceState(deviceSn, stateData) {
+    const configJson = JSON.stringify(stateData);
+    const query = 'UPDATE device_info SET config = ? WHERE device_sn = ?';
+    const [result] = await db.promise().query(query, [configJson, deviceSn]);
+    return result.affectedRows > 0;
+}
+
 
 export default {
     bindDeviceToCircle,
@@ -152,4 +197,6 @@ export default {
     updateDeviceInfo,
     unbindDeviceFromCircle,
     findDeviceBySn,
+    updateDeviceHeartbeat,
+    updateDeviceState
 };
