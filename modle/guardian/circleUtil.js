@@ -21,6 +21,7 @@ const generateCircleCode = () => {
  * @returns {Promise<object>} 返回新创建的守护圈信息
  */
 async function createCircle(circleData, creatorUid) {
+    // ... (此部分代码无需修改，保持原样)
     return new Promise((resolve, reject) => {
         db.getConnection((err, connection) => {
             if (err) {
@@ -96,6 +97,7 @@ async function createCircle(circleData, creatorUid) {
     });
 }
 
+// ... (findCircleById, findCirclesByCreatorId, findAllCircles, updateCircle, deleteCircle 函数保持原样)
 /**
  * @description 根据圈子ID查找守护圈信息
  * @param {number} circleId - 守护圈ID
@@ -124,9 +126,9 @@ async function findCirclesByCreatorId(creatorUid) {
  */
 async function findAllCircles() {
     const query = `
-        SELECT gc.*, up.username as creator_name 
+        SELECT gc.*, up.username as creator_name
         FROM guardian_circle gc
-        LEFT JOIN user_profile up ON gc.creator_uid = up.id
+                 LEFT JOIN user_profile up ON gc.creator_uid = up.id
         ORDER BY gc.create_time DESC`;
     const [rows] = await db.promise().query(query);
     return rows;
@@ -203,13 +205,202 @@ async function deleteCircle(circleId) {
 }
 
 
+/**
+ * @description 获取仪表盘统计数据 (已修复)
+ * @param {number} userId - 用户ID
+ * @param {number} userRole - 用户角色 (1: 普通用户, 2: 管理员)
+ * @returns {Promise<object>} 返回统计数据
+ */
+async function getDashboardStats(userId, userRole) {
+    try {
+        const stats = {
+            totalCircles: 0,
+            totalMembers: 0,
+            totalDevices: 0,
+            totalAlerts: 0,
+            activeDevices: 0,
+            pendingAlerts: 0,
+            myCircles: 0,
+            todayEvents: 0
+        };
+
+        // 首先，无论什么角色，都获取“我创建的圈子”数量
+        const [myCircleStats] = await db.promise().query('SELECT COUNT(*) as count FROM guardian_circle WHERE creator_uid = ?', [userId]);
+        stats.myCircles = myCircleStats[0].count;
+
+        if (userRole >= 2) {
+            // 管理员: 查看全局数据
+            const [circleStats] = await db.promise().query('SELECT COUNT(*) as count FROM guardian_circle');
+            stats.totalCircles = circleStats[0].count;
+
+            const [memberStats] = await db.promise().query('SELECT COUNT(*) as count FROM circle_member_map');
+            stats.totalMembers = memberStats[0].count;
+
+            const [deviceStats] = await db.promise().query('SELECT COUNT(*) as count FROM device_info');
+            stats.totalDevices = deviceStats[0].count;
+
+            const [activeDeviceStats] = await db.promise().query('SELECT COUNT(*) as count FROM device_info WHERE last_heartbeat > DATE_SUB(NOW(), INTERVAL 5 MINUTE)');
+            stats.activeDevices = activeDeviceStats[0].count;
+
+            const [alertStats] = await db.promise().query('SELECT COUNT(*) as count FROM alert_log');
+            stats.totalAlerts = alertStats[0].count;
+
+            const [pendingAlertStats] = await db.promise().query('SELECT COUNT(*) as count FROM alert_log WHERE status = 0'); // 待处理状态为 0
+            stats.pendingAlerts = pendingAlertStats[0].count;
+
+            const [todayEventStats] = await db.promise().query('SELECT COUNT(*) as count FROM event_log WHERE DATE(event_time) = CURDATE()');
+            stats.todayEvents = todayEventStats[0].count;
+
+        } else {
+            // 普通用户: 查看自己参与的所有圈子的数据
+            // 获取用户参与的所有圈子ID
+            const [userCircles] = await db.promise().query('SELECT DISTINCT circle_id FROM circle_member_map WHERE uid = ?', [userId]);
+            const circleIds = userCircles.map(row => row.circle_id);
+
+            stats.totalCircles = circleIds.length; // 圈子总数是用户参与的圈子数
+
+            if (circleIds.length > 0) {
+                const placeholders = circleIds.map(() => '?').join(',');
+
+                const [memberStats] = await db.promise().query(`SELECT COUNT(*) as count FROM circle_member_map WHERE circle_id IN (${placeholders})`, circleIds);
+                stats.totalMembers = memberStats[0].count;
+
+                const [deviceStats] = await db.promise().query(`SELECT COUNT(*) as count FROM device_info WHERE circle_id IN (${placeholders})`, circleIds);
+                stats.totalDevices = deviceStats[0].count;
+
+                const [activeDeviceStats] = await db.promise().query(`SELECT COUNT(*) as count FROM device_info WHERE circle_id IN (${placeholders}) AND last_heartbeat > DATE_SUB(NOW(), INTERVAL 5 MINUTE)`, circleIds);
+                stats.activeDevices = activeDeviceStats[0].count;
+
+                const [alertStats] = await db.promise().query(`SELECT COUNT(*) as count FROM alert_log WHERE circle_id IN (${placeholders})`, circleIds);
+                stats.totalAlerts = alertStats[0].count;
+
+                const [pendingAlertStats] = await db.promise().query(`SELECT COUNT(*) as count FROM alert_log WHERE circle_id IN (${placeholders}) AND status = 0`, [...circleIds]); // 待处理状态为 0
+                stats.pendingAlerts = pendingAlertStats[0].count;
+
+                const [todayEventStats] = await db.promise().query(`SELECT COUNT(*) as count FROM event_log WHERE circle_id IN (${placeholders}) AND DATE(event_time) = CURDATE()`, circleIds);
+                stats.todayEvents = todayEventStats[0].count;
+            }
+        }
+
+        return stats;
+    } catch (error) {
+        throw new Error('获取仪表盘统计数据失败: ' + error.message);
+    }
+}
+
+
+/**
+ * @description 获取仪表盘图表数据 (已修复)
+ * @param {number} userId - 用户ID
+ * @param {number} userRole - 用户角色 (1: 普通用户, 2: 管理员)
+ * @returns {Promise<object>} 返回图表数据
+ */
+async function getDashboardCharts(userId, userRole) {
+    try {
+        const chartData = {
+            alertTrend: [],
+            deviceStatus: [],
+            circleActivity: [],
+            alertTypes: [],
+            memberGrowth: []
+        };
+
+        // 1. 根据角色获取需要查询的圈子ID列表
+        let circleIds = [];
+        if (userRole >= 2) { // 管理员获取所有圈子ID
+            const [allCircles] = await db.promise().query('SELECT id FROM guardian_circle');
+            circleIds = allCircles.map(row => row.id);
+        } else { // 普通用户获取自己参与的圈子ID
+            const [userCircles] = await db.promise().query('SELECT DISTINCT circle_id FROM circle_member_map WHERE uid = ?', [userId]);
+            circleIds = userCircles.map(row => row.circle_id);
+        }
+
+        if (circleIds.length === 0) {
+            return chartData; // 如果没有任何相关圈子，直接返回空数据
+        }
+
+        const placeholders = circleIds.map(() => '?').join(',');
+
+        // 2. 并行执行所有图表查询
+        const [
+            alertTrendData,
+            deviceStatusData,
+            circleActivityData,
+            alertTypesData,
+            memberGrowthData
+        ] = await Promise.all([
+            // 告警趋势（最近7天）
+            db.promise().query(`
+                SELECT DATE(create_time) as date, COUNT(*) as value
+                FROM alert_log
+                WHERE circle_id IN (${placeholders}) AND create_time >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+                GROUP BY DATE(create_time)
+                ORDER BY date ASC
+            `, circleIds),
+            // 设备状态分布
+            db.promise().query(`
+                SELECT 
+                    CASE 
+                        WHEN device_status = 1 THEN '在线'
+                        WHEN device_status = 2 THEN '离线'
+                        ELSE '异常'
+                    END as name,
+                    COUNT(*) as value
+                FROM device_info 
+                WHERE circle_id IN (${placeholders})
+                GROUP BY name
+            `, circleIds),
+            // 圈子活跃度（基于事件数量）
+            db.promise().query(`
+                SELECT gc.circle_name as name, COUNT(el.id) as value
+                FROM event_log el
+                JOIN guardian_circle gc ON el.circle_id = gc.id
+                WHERE el.circle_id IN (${placeholders}) AND el.event_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                GROUP BY el.circle_id, gc.circle_name
+                ORDER BY value DESC
+                LIMIT 10
+            `, circleIds),
+            // 告警类型分布 (修复: 关联 event_log 获取 event_type)
+            db.promise().query(`
+                SELECT el.event_type as name, COUNT(al.id) as value
+                FROM alert_log al
+                JOIN event_log el ON al.event_id = el.id
+                WHERE al.circle_id IN (${placeholders}) AND al.create_time >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                GROUP BY el.event_type
+                ORDER BY value DESC
+            `, circleIds),
+            // 成员增长趋势（最近30天）(修复: 使用 create_time)
+            db.promise().query(`
+                SELECT DATE(create_time) as date, COUNT(*) as value
+                FROM circle_member_map 
+                WHERE circle_id IN (${placeholders}) AND create_time >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+                GROUP BY DATE(create_time)
+                ORDER BY date ASC
+            `, circleIds)
+        ]);
+
+        chartData.alertTrend = alertTrendData[0];
+        chartData.deviceStatus = deviceStatusData[0];
+        chartData.circleActivity = circleActivityData[0];
+        chartData.alertTypes = alertTypesData[0];
+        chartData.memberGrowth = memberGrowthData[0];
+
+        return chartData;
+    } catch (error) {
+        throw new Error('获取仪表盘图表数据失败: ' + error.message);
+    }
+}
+
+
 export {
     createCircle,
     findCircleById,
     findCirclesByCreatorId,
     findAllCircles,
     updateCircle,
-    deleteCircle
+    deleteCircle,
+    getDashboardStats,
+    getDashboardCharts
 };
 
 export default {
@@ -218,5 +409,7 @@ export default {
     findCirclesByCreatorId,
     findAllCircles,
     updateCircle,
-    deleteCircle
+    deleteCircle,
+    getDashboardStats,
+    getDashboardCharts
 };

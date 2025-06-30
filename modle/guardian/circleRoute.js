@@ -215,4 +215,74 @@ router.get('/:circleId/devices', authorize([1, 2]), async (req, res, next) => {
 });
 
 
+/**
+ * @api {GET} /api/guardian/circle/dashboard/stats - 获取仪表盘统计数据
+ * @description 获取仪表盘的各项统计数据，包括圈子数量、成员数量、设备数量、告警数量等。
+ * - 普通用户(1): 只能看到自己参与的圈子相关统计。
+ * - 管理员(2): 可以看到全局统计数据。
+ * @permission 普通用户(1), 管理员(2)
+ * @returns {object} 统计数据对象
+ */
+router.get('/dashboard/stats', authorize([1, 2]), async (req, res, next) => {
+    try {
+        const { id: userId, role } = req.user;
+        
+        const stats = await circleUtil.getDashboardStats(userId, role);
+        
+        res.json({
+            code: 200,
+            message: '获取仪表盘统计数据成功',
+            data: {
+                stats,
+                userRole: role,
+                timestamp: new Date().toISOString()
+            },
+            error: null
+        });
+        
+    } catch (error) {
+        next(error);
+    }
+});
+
+
+/**
+ * @api {GET} /api/guardian/circle/dashboard/charts - 获取仪表盘图表数据
+ * @description 获取仪表盘的各种图表数据，用于ECharts等图表组件展示。
+ * 包括告警趋势、设备状态分布、圈子活跃度、告警类型分布、成员增长趋势等。
+ * - 普通用户(1): 只能看到自己参与的圈子相关图表数据。
+ * - 管理员(2): 可以看到全局图表数据。
+ * @permission 普通用户(1), 管理员(2)
+ * @returns {object} 图表数据对象
+ */
+router.get('/dashboard/charts', authorize([1, 2]), async (req, res, next) => {
+    try {
+        const { id: userId, role } = req.user;
+        
+        const chartData = await circleUtil.getDashboardCharts(userId, role);
+        
+        res.json({
+            code: 200,
+            message: '获取仪表盘图表数据成功',
+            data: {
+                charts: chartData,
+                userRole: role,
+                timestamp: new Date().toISOString(),
+                description: {
+                    alertTrend: '最近7天告警趋势',
+                    deviceStatus: '设备状态分布',
+                    circleActivity: '圈子活跃度排行（基于最近7天事件数量）',
+                    alertTypes: '告警类型分布（最近30天）',
+                    memberGrowth: '成员增长趋势（最近30天）'
+                }
+            },
+            error: null
+        });
+        
+    } catch (error) {
+        next(error);
+    }
+});
+
+
 export default router;
