@@ -47,7 +47,7 @@ router.delete('/:eventId', authorize([2]), async (req, res, next) => {
 
         const success = await eventUtil.deleteEventById(parseInt(eventId));
         if (success) {
-            res.json({ code: 200, message: '事件日志删除成功', data: null });
+            res.json({ code: 200, message: '事件日志删除成功', data: null, error: null });
         } else {
             // 理论上如果能找到，就一定能删掉，但以防万一
             throw new Error('删除事件日志失败');

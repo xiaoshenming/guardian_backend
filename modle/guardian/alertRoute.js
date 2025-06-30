@@ -46,15 +46,18 @@ router.get('/', verifyToken, async (req, res) => {
         }
 
         res.json({
-            success: true,
+            code: 200,
+            message: "获取告警记录成功",
             data: result,
-            userRole: userRole // 返回用户角色，便于前端判断
+            error: null
         });
     } catch (error) {
         console.error('获取告警记录失败:', error);
         res.status(500).json({
-            success: false,
-            message: '获取告警记录失败'
+            code: 500,
+            message: '获取告警记录失败',
+            data: null,
+            error: null
         });
     }
 });
@@ -76,15 +79,18 @@ router.get('/stats', verifyToken, async (req, res) => {
         );
 
         res.json({
-            success: true,
+            code: 200,
+            message: "获取告警统计成功",
             data: stats,
-            userRole: userRole
+            error: null
         });
     } catch (error) {
         console.error('获取告警统计失败:', error);
         res.status(500).json({
-            success: false,
-            message: '获取告警统计失败'
+            code: 500,
+            message: '获取告警统计失败',
+            data: null,
+            error: null
         });
     }
 });
@@ -110,8 +116,10 @@ router.get('/:circleId([0-9]+)', verifyToken, async (req, res) => {
             const member = await memberUtil.findMemberByUserAndCircle(userId, circleId);
             if (!member) {
                 return res.status(403).json({
-                    success: false,
-                    message: '无权限访问该守护圈的告警记录'
+                    code: 403,
+                    message: '无权限访问该守护圈的告警记录',
+                    data: null,
+                    error: null
                 });
             }
         }
@@ -124,14 +132,18 @@ router.get('/:circleId([0-9]+)', verifyToken, async (req, res) => {
         );
 
         res.json({
-            success: true,
-            data: result
+            code: 200,
+            message: "获取告警记录成功",
+            data: result,
+            error: null
         });
     } catch (error) {
         console.error('获取告警记录失败:', error);
         res.status(500).json({
-            success: false,
-            message: '获取告警记录失败'
+            code: 500,
+            message: '获取告警记录失败',
+            data: null,
+            error: null
         });
     }
 });
@@ -153,8 +165,10 @@ router.put('/:alertId', verifyToken, async (req, res) => {
         // 验证状态值
         if (![2, 3].includes(parseInt(status))) {
             return res.status(400).json({
-                success: false,
-                message: '无效的状态值'
+                code: 400,
+                message: '无效的状态值',
+                data: null,
+                error: null
             });
         }
 
@@ -162,8 +176,10 @@ router.put('/:alertId', verifyToken, async (req, res) => {
         const alert = await alertUtil.findAlertById(parseInt(alertId));
         if (!alert) {
             return res.status(404).json({
-                success: false,
-                message: '告警记录不存在'
+                code: 404,
+                message: '告警记录不存在',
+                data: null,
+                error: null
             });
         }
 
@@ -172,8 +188,10 @@ router.put('/:alertId', verifyToken, async (req, res) => {
             const member = await memberUtil.findMemberByUserAndCircle(userId, alert.circle_id);
             if (!member) {
                 return res.status(403).json({
-                    success: false,
-                    message: '无权限处理该告警'
+                    code: 403,
+                    message: '无权限操作该告警记录',
+                    data: null,
+                    error: null
                 });
             }
         }
@@ -186,9 +204,11 @@ router.put('/:alertId', verifyToken, async (req, res) => {
 
         if (success) {
             res.json({
-                success: true,
-                message: '告警状态更新成功'
-            });
+            code: 200,
+            message: '告警状态更新成功',
+            data: null,
+            error: null
+        });
         } else {
             res.status(400).json({
                 success: false,
@@ -198,8 +218,10 @@ router.put('/:alertId', verifyToken, async (req, res) => {
     } catch (error) {
         console.error('更新告警状态失败:', error);
         res.status(500).json({
-            success: false,
-            message: '更新告警状态失败'
+            code: 500,
+            message: '更新告警状态失败',
+            data: null,
+            error: null
         });
     }
 });
@@ -220,8 +242,10 @@ router.delete('/:alertId', verifyToken, async (req, res) => {
         const alert = await alertUtil.findAlertById(parseInt(alertId));
         if (!alert) {
             return res.status(404).json({
-                success: false,
-                message: '告警记录不存在'
+                code: 404,
+                message: '告警记录不存在',
+                data: null,
+                error: null
             });
         }
 
@@ -230,8 +254,10 @@ router.delete('/:alertId', verifyToken, async (req, res) => {
             const member = await memberUtil.findMemberByUserAndCircle(userId, alert.circle_id);
             if (!member) {
                 return res.status(403).json({
-                    success: false,
-                    message: '权限不足，无法删除该告警记录'
+                    code: 403,
+                    message: '无权限删除该告警记录',
+                    data: null,
+                    error: null
                 });
             }
         }
@@ -240,20 +266,26 @@ router.delete('/:alertId', verifyToken, async (req, res) => {
 
         if (success) {
             res.json({
-                success: true,
-                message: '告警记录删除成功'
-            });
+            code: 200,
+            message: '告警记录删除成功',
+            data: null,
+            error: null
+        });
         } else {
             res.status(404).json({
-                success: false,
-                message: '告警记录不存在或删除失败'
+                code: 404,
+                message: '告警记录不存在或删除失败',
+                data: null,
+                error: null
             });
         }
     } catch (error) {
         console.error('删除告警记录失败:', error);
         res.status(500).json({
-            success: false,
-            message: '删除告警记录失败'
+            code: 500,
+            message: '删除告警记录失败',
+            data: null,
+            error: null
         });
     }
 });
