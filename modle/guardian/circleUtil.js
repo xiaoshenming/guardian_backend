@@ -110,26 +110,66 @@ async function findCircleById(circleId) {
 }
 
 /**
- * @description 根据创建者ID查找其创建的所有守护圈
- * @param {number} creatorUid - 创建者用户ID
- * @returns {Promise<Array>} 返回守护圈列表
+ * @description 根据创建者ID查找其创建的所有守护圈 (已三次修复)
+ * @param {number} creatorUid - 创建者用户ID (login_verification.id)
+ * @returns {Promise<Array>} 返回守护圈列表，包含创建者信息、成员数和设备数
  */
 async function findCirclesByCreatorId(creatorUid) {
-    const query = 'SELECT * FROM guardian_circle WHERE creator_uid = ? ORDER BY create_time DESC';
+    const query = `
+        SELECT
+            gc.*,
+            up.username AS creator_name,
+            up.email AS creator_email,
+            COUNT(DISTINCT cmm.id) AS member_count,
+            COUNT(DISTINCT di.id) AS device_count
+        FROM
+            guardian_circle AS gc
+                LEFT JOIN
+            login_verification AS lv ON gc.creator_uid = lv.id
+                LEFT JOIN
+            user_profile AS up ON lv.uid = up.id
+                LEFT JOIN
+            circle_member_map AS cmm ON gc.id = cmm.circle_id
+                LEFT JOIN
+            device_info AS di ON gc.id = di.circle_id
+        WHERE
+            gc.creator_uid = ?
+        GROUP BY
+            gc.id
+        ORDER BY
+            gc.create_time DESC
+    `;
     const [rows] = await db.promise().query(query, [creatorUid]);
     return rows;
 }
 
 /**
- * @description 获取所有守护圈（管理员权限）
- * @returns {Promise<Array>} 返回所有守护圈的列表
+ * @description 获取所有守护圈（管理员权限） (已三次修复)
+ * @returns {Promise<Array>} 返回所有守护圈的列表，包含创建者信息、成员数和设备数
  */
 async function findAllCircles() {
     const query = `
-        SELECT gc.*, up.username as creator_name
-        FROM guardian_circle gc
-                 LEFT JOIN user_profile up ON gc.creator_uid = up.id
-        ORDER BY gc.create_time DESC`;
+        SELECT
+            gc.*,
+            up.username AS creator_name,
+            up.email AS creator_email,
+            COUNT(DISTINCT cmm.id) AS member_count,
+            COUNT(DISTINCT di.id) AS device_count
+        FROM
+            guardian_circle AS gc
+                LEFT JOIN
+            login_verification AS lv ON gc.creator_uid = lv.id
+                LEFT JOIN
+            user_profile AS up ON lv.uid = up.id
+                LEFT JOIN
+            circle_member_map AS cmm ON gc.id = cmm.circle_id
+                LEFT JOIN
+            device_info AS di ON gc.id = di.circle_id
+        GROUP BY
+            gc.id
+        ORDER BY
+            gc.create_time DESC
+    `;
     const [rows] = await db.promise().query(query);
     return rows;
 }
