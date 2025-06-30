@@ -3,7 +3,8 @@ import express from "express"; // 使用 Express 框架
 import dotenv from "dotenv"; // 加载环境变量
 import cors from "cors"; // 启用跨域支持
 import http from "http"; // 用于创建 HTTP 服务器
-
+// --- 1. 导入你的初始化函数 ---
+import { initializeDatabase } from "./init/seed.js";
 dotenv.config(); // 加载环境变量
 const app = express(); // 创建 Express 实例
 const port = process.env.PORT || 3000; // 默认端口
@@ -91,10 +92,24 @@ app.use((err, req, res, next) => {
   });
 });
 
-startHeartbeats(); // 启动心跳检测服务
+// startHeartbeats(); // 启动心跳检测服务
 initMqtt(); // 2. 启动 MQTT 监听
 
-server.listen(port, "0.0.0.0", () => {
-  console.log(`✅ Guardian 服务器已启动，监听端口：http://0.0.0.0:${port}`);
-  console.log(`✅ API 文档地址: http://0.0.0.0:${port}`);
-});
+/**
+ * @description 启动服务器的主函数
+ */
+async function startServer() {
+  // --- 2. 在启动服务器前，执行数据库初始化 ---
+  // 这个函数是幂等的，所以可以安全地每次都调用
+  await initializeDatabase();
+
+  startHeartbeats(); // 启动心跳检测服务
+
+  server.listen(port, "0.0.0.0", () => {
+    console.log(`服务器已启动，监听端口：http://0.0.0.0:${port}`);
+    console.log(`API文档地址: http://0.0.0.0:${port}`);
+  });
+}
+
+// --- 3. 调用主函数启动服务器 ---
+startServer();

@@ -15,30 +15,32 @@ const router = express.Router();
  * @body {string} [description] - 守护圈描述 (选填)
  */
 router.post('/', authorize([1, 2]), async (req, res, next) => {
-  try {
-    const { circle_name, description } = req.body;
-    // 1. 输入验证
-    if (!circle_name) {
-      return res.status(400).json({ code: 400, message: '守护圈名称不能为空', data: null, error: null });
+    try {
+        const { circle_name, description } = req.body;
+        if (!circle_name) {
+            return res.status(400).json({ code: 400, message: '守护圈名称不能为空', data: null, error: null });
+        }
+
+        // 修正：从 req.user 获取创建者的业务ID (uid)，而不是认证ID (id)
+        const creatorUid = req.user.uid;
+
+        // 检查 creatorUid 是否存在
+        if (!creatorUid) {
+            return res.status(400).json({ code: 400, message: '无效的用户凭证，缺少用户标识', data: null, error: null });
+        }
+
+        const newCircle = await circleUtil.createCircle({ circle_name, description }, creatorUid);
+
+        res.status(201).json({
+            code: 201,
+            message: '守护圈创建成功',
+            data: newCircle,
+            error: null
+        });
+
+    } catch (error) {
+        next(error);
     }
-
-    // 2. 从 req.user 获取创建者ID (来自JWT)
-    const creatorUid = req.user.id;
-
-    // 3. 调用工具函数创建圈子
-    const newCircle = await circleUtil.createCircle({ circle_name, description }, creatorUid);
-
-    // 4. 返回成功响应
-    res.status(201).json({
-      code: 201,
-      message: '守护圈创建成功',
-      data: newCircle,
-      error: null
-    });
-
-  } catch (error) {
-    next(error); // 将错误传递给全局错误处理器
-  }
 });
 
 
@@ -50,26 +52,27 @@ router.post('/', authorize([1, 2]), async (req, res, next) => {
  * @permission 普通用户(1), 管理员(2)
  */
 router.get('/', authorize([1, 2]), async (req, res, next) => {
-  try {
-    const { id: userId, role } = req.user;
-    let circles;
+    try {
+        const { uid: userUid, role } = req.user; // 使用 uid
+        let circles;
 
-    if (role === 1) { // 普通用户
-      circles = await circleUtil.findCirclesByCreatorId(userId);
-    } else { // 管理员或更高权限
-      circles = await circleUtil.findAllCircles();
+        if (role === 1) { // 普通用户
+            // 修正：调用新的、正确的函数
+            circles = await circleUtil.findCirclesByUserId(userUid);
+        } else { // 管理员或更高权限
+            circles = await circleUtil.findAllCircles();
+        }
+
+        res.json({
+            code: 200,
+            message: '获取守护圈列表成功',
+            data: circles,
+            error: null
+        });
+
+    } catch (error) {
+        next(error);
     }
-
-    res.json({
-      code: 200,
-      message: '获取守护圈列表成功',
-      data: circles,
-      error: null
-    });
-
-  } catch (error) {
-    next(error);
-  }
 });
 
 
@@ -79,31 +82,32 @@ router.get('/', authorize([1, 2]), async (req, res, next) => {
  * @permission 普通用户(1) 只能看自己的圈子, 管理员(2) 可以看任意圈子
  */
 router.get('/:id', authorize([1, 2]), async (req, res, next) => {
-  try {
-    const { id: circleId } = req.params;
-    const { id: userId, role } = req.user;
+    try {
+        const { id: circleId } = req.params;
+        const { uid: userUid, role } = req.user; // 修正：使用 uid 进行业务逻辑判断
 
-    const circle = await circleUtil.findCircleById(circleId);
+        const circle = await circleUtil.findCircleById(circleId);
 
-    if (!circle) {
-      return res.status(404).json({ code: 404, message: '守护圈不存在', data: null, error: null });
+        if (!circle) {
+            return res.status(404).json({ code: 404, message: '守护圈不存在', data: null, error: null });
+        }
+
+        // 权限检查：普通用户只能查看自己创建的圈子
+        // 修正：使用 circle.creator_uid 和 userUid (都来自 user_profile.id) 进行比较
+        if (role === 1 && circle.creator_uid !== userUid) {
+            return res.status(403).json({ code: 403, message: '权限不足，无法查看此守护圈', data: null, error: null });
+        }
+
+        res.json({
+            code: 200,
+            message: '获取守护圈详情成功',
+            data: circle,
+            error: null
+        });
+
+    } catch (error) {
+        next(error);
     }
-
-    // 权限检查：普通用户只能查看自己创建的圈子
-    if (role === 1 && circle.creator_uid !== userId) {
-      return res.status(403).json({ code: 403, message: '权限不足，无法查看此守护圈', data: null, error: null });
-    }
-
-    res.json({
-      code: 200,
-      message: '获取守护圈详情成功',
-      data: circle,
-      error: null
-    });
-
-  } catch (error) {
-    next(error);
-  }
 });
 
 
@@ -115,39 +119,28 @@ router.get('/:id', authorize([1, 2]), async (req, res, next) => {
  * @body {string} [description] - 新的守护圈描述 (选填)
  */
 router.put('/:id', authorize([1, 2]), async (req, res, next) => {
-  try {
-    const { id: circleId } = req.params;
-    const { id: userId, role } = req.user;
-    const { circle_name, description } = req.body;
+    try {
+        const { id: circleId } = req.params;
+        const { uid: userUid, role } = req.user; // 修正：使用 uid
+        const { circle_name, description } = req.body;
 
-    if (!circle_name) {
-      return res.status(400).json({ code: 400, message: '守护圈名称不能为空', data: null, error: null });
+        // ... (输入验证)
+
+        const circle = await circleUtil.findCircleById(circleId);
+        if (!circle) {
+            return res.status(404).json({ code: 404, message: '要更新的守护圈不存在', data: null, error: null });
+        }
+
+        // 修正：权限检查
+        if (role === 1 && circle.creator_uid !== userUid) {
+            return res.status(403).json({ code: 403, message: '权限不足，无法修改此守护圈', data: null, error: null });
+        }
+
+        await circleUtil.updateCircle(circleId, { circle_name, description });
+        res.json({ code: 200, message: '守护圈信息更新成功', data: null, error: null });
+    } catch (error) {
+        next(error);
     }
-
-    // 1. 检查圈子是否存在
-    const circle = await circleUtil.findCircleById(circleId);
-    if (!circle) {
-      return res.status(404).json({ code: 404, message: '要更新的守护圈不存在', data: null, error: null });
-    }
-
-    // 2. 权限检查
-    if (role === 1 && circle.creator_uid !== userId) {
-      return res.status(403).json({ code: 403, message: '权限不足，无法修改此守护圈', data: null, error: null });
-    }
-
-    // 3. 执行更新
-    await circleUtil.updateCircle(circleId, { circle_name, description });
-
-    res.json({
-      code: 200,
-      message: '守护圈信息更新成功',
-      data: null,
-      error: null
-    });
-
-  } catch (error) {
-    next(error);
-  }
 });
 
 
@@ -157,34 +150,25 @@ router.put('/:id', authorize([1, 2]), async (req, res, next) => {
  * @permission 普通用户(1) 只能删除自己的圈子, 管理员(2) 可以删除任意圈子
  */
 router.delete('/:id', authorize([1, 2]), async (req, res, next) => {
-  try {
-    const { id: circleId } = req.params;
-    const { id: userId, role } = req.user;
+    try {
+        const { id: circleId } = req.params;
+        const { uid: userUid, role } = req.user; // 修正：使用 uid
 
-    // 1. 检查圈子是否存在
-    const circle = await circleUtil.findCircleById(circleId);
-    if (!circle) {
-      return res.status(404).json({ code: 404, message: '要删除的守护圈不存在', data: null, error: null });
+        const circle = await circleUtil.findCircleById(circleId);
+        if (!circle) {
+            return res.status(404).json({ code: 404, message: '要删除的守护圈不存在', data: null, error: null });
+        }
+
+        // 修正：权限检查
+        if (role === 1 && circle.creator_uid !== userUid) {
+            return res.status(403).json({ code: 403, message: '权限不足，无法删除此守护圈', data: null, error: null });
+        }
+
+        await circleUtil.deleteCircle(circleId);
+        res.json({ code: 200, message: '守护圈已成功删除', data: null, error: null });
+    } catch (error) {
+        next(error);
     }
-
-    // 2. 权限检查
-    if (role === 1 && circle.creator_uid !== userId) {
-      return res.status(403).json({ code: 403, message: '权限不足，无法删除此守护圈', data: null, error: null });
-    }
-
-    // 3. 执行删除（事务已在Util层处理）
-    await circleUtil.deleteCircle(circleId);
-
-    res.json({
-      code: 200,
-      message: '守护圈已成功删除',
-      data: null,
-      error: null
-    });
-
-  } catch (error) {
-    next(error);
-  }
 });
 
 
@@ -226,9 +210,9 @@ router.get('/:circleId/devices', authorize([1, 2]), async (req, res, next) => {
 router.get('/dashboard/stats', authorize([1, 2]), async (req, res, next) => {
     try {
         const { id: userId, role } = req.user;
-        
+
         const stats = await circleUtil.getDashboardStats(userId, role);
-        
+
         res.json({
             code: 200,
             message: '获取仪表盘统计数据成功',
@@ -239,7 +223,7 @@ router.get('/dashboard/stats', authorize([1, 2]), async (req, res, next) => {
             },
             error: null
         });
-        
+
     } catch (error) {
         next(error);
     }
@@ -258,9 +242,9 @@ router.get('/dashboard/stats', authorize([1, 2]), async (req, res, next) => {
 router.get('/dashboard/charts', authorize([1, 2]), async (req, res, next) => {
     try {
         const { id: userId, role } = req.user;
-        
+
         const chartData = await circleUtil.getDashboardCharts(userId, role);
-        
+
         res.json({
             code: 200,
             message: '获取仪表盘图表数据成功',
@@ -278,7 +262,7 @@ router.get('/dashboard/charts', authorize([1, 2]), async (req, res, next) => {
             },
             error: null
         });
-        
+
     } catch (error) {
         next(error);
     }

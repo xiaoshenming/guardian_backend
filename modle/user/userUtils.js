@@ -15,6 +15,7 @@ function generateJWT(loginUser, deviceType) {
   return jwt.sign(
     {
       id: loginUser.id,
+      uid: loginUser.uid,         // 用户业务ID (user_profile.id)，用于业务逻辑
       role: loginUser.role,
       device: deviceType,
       name: loginUser.name,
@@ -103,14 +104,14 @@ async function createUser(userData) {
         reject(err);
         return;
       }
-      
+
       connection.beginTransaction(async (err) => {
         if (err) {
           connection.release();
           reject(err);
           return;
         }
-        
+
         try {
           // 1. 创建用户资料
           const profileQuery = 'INSERT INTO user_profile (username, email, status) VALUES (?, ?, ?)';
@@ -120,9 +121,9 @@ async function createUser(userData) {
               else resolve(results);
             });
           });
-          
+
           const userId = profileResult.insertId;
-          
+
           // 2. 创建登录凭证
           const hashedPassword = await bcrypt.hash(userData.password, 10);
           const loginQuery = 'INSERT INTO login_verification (uid, login_name, password_hash, email, role) VALUES (?, ?, ?, ?, ?)';
@@ -132,7 +133,7 @@ async function createUser(userData) {
               else resolve(results);
             });
           });
-          
+
           connection.commit((err) => {
             if (err) {
               connection.rollback(() => {

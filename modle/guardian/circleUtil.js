@@ -97,7 +97,7 @@ async function createCircle(circleData, creatorUid) {
     });
 }
 
-// ... (findCircleById, findCirclesByCreatorId, findAllCircles, updateCircle, deleteCircle 函数保持原样)
+// ... (findCircleById, findCirclesByUserId, findAllCircles, updateCircle, deleteCircle 函数保持原样)
 /**
  * @description 根据圈子ID查找守护圈信息
  * @param {number} circleId - 守护圈ID
@@ -114,32 +114,34 @@ async function findCircleById(circleId) {
  * @param {number} creatorUid - 创建者用户ID (login_verification.id)
  * @returns {Promise<Array>} 返回守护圈列表，包含创建者信息、成员数和设备数
  */
-async function findCirclesByCreatorId(creatorUid) {
+async function findCirclesByUserId(userUid) {
     const query = `
         SELECT
-            gc.*,
+            gc.id,
+            gc.circle_name,
+            gc.creator_uid,
+            gc.circle_code,
+            gc.description,
+            gc.create_time,
+            gc.update_time,
             up.username AS creator_name,
             up.email AS creator_email,
-            COUNT(DISTINCT cmm.id) AS member_count,
-            COUNT(DISTINCT di.id) AS device_count
+            (SELECT COUNT(*) FROM circle_member_map WHERE circle_id = gc.id) AS member_count,
+            (SELECT COUNT(*) FROM device_info WHERE circle_id = gc.id) AS device_count
         FROM
-            guardian_circle AS gc
+            circle_member_map AS cmm
+                JOIN
+            guardian_circle AS gc ON cmm.circle_id = gc.id
                 LEFT JOIN
-            login_verification AS lv ON gc.creator_uid = lv.id
-                LEFT JOIN
-            user_profile AS up ON lv.uid = up.id
-                LEFT JOIN
-            circle_member_map AS cmm ON gc.id = cmm.circle_id
-                LEFT JOIN
-            device_info AS di ON gc.id = di.circle_id
+            user_profile AS up ON gc.creator_uid = up.id
         WHERE
-            gc.creator_uid = ?
+            cmm.uid = ?
         GROUP BY
             gc.id
         ORDER BY
             gc.create_time DESC
     `;
-    const [rows] = await db.promise().query(query, [creatorUid]);
+    const [rows] = await db.promise().query(query, [userUid]);
     return rows;
 }
 
@@ -150,21 +152,21 @@ async function findCirclesByCreatorId(creatorUid) {
 async function findAllCircles() {
     const query = `
         SELECT
-            gc.*,
+            gc.id,
+            gc.circle_name,
+            gc.creator_uid,
+            gc.circle_code,
+            gc.description,
+            gc.create_time,
+            gc.update_time,
             up.username AS creator_name,
             up.email AS creator_email,
-            COUNT(DISTINCT cmm.id) AS member_count,
-            COUNT(DISTINCT di.id) AS device_count
+            (SELECT COUNT(*) FROM circle_member_map WHERE circle_id = gc.id) AS member_count,
+            (SELECT COUNT(*) FROM device_info WHERE circle_id = gc.id) AS device_count
         FROM
             guardian_circle AS gc
                 LEFT JOIN
-            login_verification AS lv ON gc.creator_uid = lv.id
-                LEFT JOIN
-            user_profile AS up ON lv.uid = up.id
-                LEFT JOIN
-            circle_member_map AS cmm ON gc.id = cmm.circle_id
-                LEFT JOIN
-            device_info AS di ON gc.id = di.circle_id
+            user_profile AS up ON gc.creator_uid = up.id
         GROUP BY
             gc.id
         ORDER BY
@@ -435,7 +437,7 @@ async function getDashboardCharts(userId, userRole) {
 export {
     createCircle,
     findCircleById,
-    findCirclesByCreatorId,
+    findCirclesByUserId,
     findAllCircles,
     updateCircle,
     deleteCircle,
@@ -446,7 +448,7 @@ export {
 export default {
     createCircle,
     findCircleById,
-    findCirclesByCreatorId,
+    findCirclesByUserId,
     findAllCircles,
     updateCircle,
     deleteCircle,
