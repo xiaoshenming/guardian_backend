@@ -3,6 +3,7 @@ import mqtt from 'mqtt';
 import deviceUtil from './deviceUtil.js';
 import eventUtil from './eventUtil.js';
 import alertUtil from './alertUtil.js';
+import db from '../../config/db.js';
 // 以后会用到
 // import actionRuleUtil from './actionRuleUtil.js';
 
@@ -64,11 +65,15 @@ export function initMqtt() {
             // 2. 根据消息类型进行路由
             switch (messageType) {
                 case 'event':
+                    console.log(`[Event] 设备: ${device.device_name}, SN: ${device.device_sn}, 发送了事件: ${data.event_type}`);
                     await handleEventMessage(device, data);
                     break;
                 case 'heartbeat':
+                    console.log(`[Heartbeat] 设备: ${device.device_name}, SN: ${device.device_sn}, 已发送心跳`);
                     // await handleHeartbeatMessage(device, data);
                     break;
+                default:
+                    console.warn(`[MQTT] 警告: 未知的消息类型: ${messageType}`);
                 // ... 其他 case
             }
         } catch (error) {

@@ -119,7 +119,7 @@ router.delete('/:deviceId', authorize([1, 2]), async (req, res, next) => {
  * @apiSuccess (200) {boolean} is_bound 设备是否已绑定。
  * @apiError (404) {boolean} is_bound=false 设备未找到或未被任何用户绑定。
  */
-router.get('/device/provisioning-info', async (req, res, next) => {
+router.get('/provisioning-info', async (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
 

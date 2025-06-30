@@ -40,7 +40,18 @@ router.post('/circle/:circleId/rules', authorize([1, 2]), async (req, res, next)
  * @permission 圈内成员
  */
 router.get('/circle/:circleId/rules', authorize([1, 2]), async (req, res, next) => {
-    // ... 同样需要校验是否为圈内成员，此处简化 ...
+
+    const { circleId } = req.params;
+    const { id: userId, role } = req.user;
+
+    // 权限校验：必须是圈主或管理员
+    if (role < 2) {
+        const circle = await circleUtil.findCircleById(circleId);
+        if (!circle || circle.creator_uid !== userId) {
+            return res.status(403).json({ code: 403, message: '权限不足，只有圈主才能查看规则', data: null, error: null });
+        }
+    }
+
     try {
         const { circleId } = req.params;
         const rules = await actionRuleUtil.findRulesByCircleId(parseInt(circleId));
