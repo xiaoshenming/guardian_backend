@@ -102,6 +102,32 @@ async function getMembership(uid, circleId) {
 }
 
 /**
+ * @description 获取指定用户所属的所有守护圈列表
+ * @param {number} uid - 用户ID
+ * @returns {Promise<Array>} 返回用户所属的所有圈子信息
+ */
+async function findCirclesByUserId(uid) {
+    const query = `
+        SELECT 
+            gc.id,
+            gc.circle_name,
+            gc.description,
+            gc.creator_uid,
+            gc.circle_code,
+            gc.create_time,
+            cmm.member_role,
+            cmm.member_alias,
+            cmm.alert_level
+        FROM circle_member_map cmm
+        JOIN guardian_circle gc ON cmm.circle_id = gc.id
+        WHERE cmm.uid = ?
+        ORDER BY cmm.member_role ASC, gc.create_time DESC
+    `;
+    const [circles] = await db.promise().query(query, [uid]);
+    return circles;
+}
+
+/**
  * @description 更新成员信息 (昵称、角色、告警级别)
  * @param {number} memberMapId - circle_member_map 表的主键 ID
  * @param {object} dataToUpdate - { member_alias, member_role, alert_level }
@@ -154,6 +180,7 @@ export default {
     findMembersByCircleId,
     findMemberByMapId,
     getMembership,
+    findCirclesByUserId,
     updateMember,
     removeMember
 };
