@@ -19,7 +19,6 @@ const router = express.Router();
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - $ref: '#/components/parameters/deviceType'
  *       - name: status
  *         in: query
  *         description: 告警状态筛选
@@ -114,8 +113,6 @@ router.get('/', verifyToken, async (req, res) => {
  *     tags: [告警管理]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - $ref: '#/components/parameters/deviceType'
  *     responses:
  *       200:
  *         description: 获取告警统计成功

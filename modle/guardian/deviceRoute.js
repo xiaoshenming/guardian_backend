@@ -14,8 +14,6 @@ const router = express.Router();
  *     tags: [设备管理]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - $ref: '#/components/parameters/deviceType'
  *     requestBody:
  *       required: true
  *       content:

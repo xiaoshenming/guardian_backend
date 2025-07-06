@@ -37,14 +37,14 @@ const options = {
       parameters: {
         deviceType: {
           name: 'deviceType',
-          in: 'query',
-          description: '设备类型，用于区分不同终端（必需参数）',
+          in: 'header',
           required: true,
           schema: {
             type: 'string',
-            enum: ['web', 'mobile', 'desktop'],
+            enum: ['web', 'mobile', 'app'],
             default: 'web'
-          }
+          },
+          description: '设备类型标识，用于区分不同终端的登录会话'
         },
         circleId: {
           name: 'circleId',

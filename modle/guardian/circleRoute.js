@@ -16,8 +16,6 @@ const router = express.Router();
  *     tags: [守护圈管理]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - $ref: '#/components/parameters/deviceType'
  *     requestBody:
  *       required: true
  *       content:
@@ -93,7 +91,6 @@ router.post('/', authorize([1, 2]), async (req, res, next) => {
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - $ref: '#/components/parameters/deviceType'
  *       - $ref: '#/components/parameters/page'
  *       - $ref: '#/components/parameters/limit'
  *     responses:

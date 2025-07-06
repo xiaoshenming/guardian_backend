@@ -118,10 +118,10 @@ router.get("/codes", authorize([1, 2, 3]), async (req, res) => {
  *                 description: 用户密码
  *                 example: "123456"
  *               deviceType:
-                 type: string
-                 enum: [web, mobile, desktop]
-                 default: web
-                 description: 设备类型，用于区分不同终端的登录会话（必需参数）
+ *                 type: string
+ *                 enum: [web, mobile, app]
+ *                 default: web
+ *                 description: 设备类型，用于区分不同终端的登录会话
  *     responses:
  *       200:
  *         description: 登录成功

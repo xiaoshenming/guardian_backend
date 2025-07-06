@@ -14,8 +14,6 @@ const router = express.Router();
  *     tags: [用户管理]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - $ref: '#/components/parameters/deviceType'
  *     responses:
  *       200:
  *         description: 获取用户信息成功
