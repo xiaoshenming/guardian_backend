@@ -6,14 +6,67 @@ import memberUtil from './memberUtil.js'; // 引入成员工具以判断权限
 const router = express.Router();
 
 /**
- * @api {POST} /api/guardian/device/bind - 绑定新设备到守护圈
- * @description 用户将一个硬件设备绑定到指定的守护圈。
- * @permission 圈内成员
- * @body {string} device_sn - 设备的唯一序列号 (必填)
- * @body {number} circle_id - 要绑定的守护圈ID (必填)
- * @body {string} device_name - 设备自定义名称 (必填)
- * @body {string} [device_model] - 设备型号 (选填)
- * @body {object} [config] - 设备专属配置 (选填, JSON对象)
+ * @swagger
+ * /api/guardian/device/bind:
+ *   post:
+ *     summary: 绑定新设备到守护圈
+ *     description: 用户将一个硬件设备绑定到指定的守护圈，需要是圈内成员才能操作
+ *     tags: [设备管理]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/deviceType'
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - device_sn
+ *               - circle_id
+ *               - device_name
+ *             properties:
+ *               device_sn:
+ *                 type: string
+ *                 description: 设备的唯一序列号
+ *                 example: "GD001234567890"
+ *               circle_id:
+ *                 type: integer
+ *                 description: 要绑定的守护圈ID
+ *                 example: 1
+ *               device_name:
+ *                 type: string
+ *                 description: 设备自定义名称
+ *                 example: "客厅摄像头"
+ *               device_model:
+ *                 type: string
+ *                 description: 设备型号（可选）
+ *                 example: "Hi3516DV300"
+ *               config:
+ *                 type: object
+ *                 description: 设备专属配置（可选）
+ *                 example: {"resolution": "1080p", "fps": 30}
+ *     responses:
+ *       201:
+ *         description: 设备绑定成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Device'
+ *       400:
+ *         description: 请求参数错误
+ *       401:
+ *         description: 未授权访问
+ *       403:
+ *         description: 权限不足，不是圈内成员
+ *       500:
+ *         description: 服务器内部错误
  */
 router.post('/bind', authorize([1, 2]), async (req, res, next) => {
     try {
@@ -111,13 +164,65 @@ router.delete('/:deviceId', authorize([1, 2]), async (req, res, next) => {
         next(error);
     }
 });
+
 /**
- * @api {GET} /api/guardian/device/provisioning-info - [供硬件设备调用] 获取预配信息
- * @description 此接口专为硬件设备（如Hi3516）设计。设备开机后，通过此接口查询自身是否已被用户绑定到某个守护圈，并获取关键的 `circle_id` 用于后续的 MQTT 通信。
- * @header {string} Authorization - 专为设备设计的认证头。格式必须为: "Device-SN <your_device_sn>"
- * @apiSuccess (200) {number} circle_id 设备所属的守护圈ID。
- * @apiSuccess (200) {boolean} is_bound 设备是否已绑定。
- * @apiError (404) {boolean} is_bound=false 设备未找到或未被任何用户绑定。
+ * @swagger
+ * /api/guardian/device/provisioning-info:
+ *   get:
+ *     summary: 获取设备预配信息
+ *     description: 专为硬件设备设计的接口，设备开机后查询自身绑定状态和守护圈信息
+ *     tags: [设备管理]
+ *     security:
+ *       - deviceAuth: []
+ *     parameters:
+ *       - name: Authorization
+ *         in: header
+ *         required: true
+ *         description: 设备认证头，格式为 "Device-SN <设备序列号>"
+ *         schema:
+ *           type: string
+ *           example: "Device-SN GD001234567890"
+ *     responses:
+ *       200:
+ *         description: 设备已绑定，返回守护圈信息
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         circle_id:
+ *                           type: integer
+ *                           description: 设备所属的守护圈ID
+ *                           example: 1
+ *                         is_bound:
+ *                           type: boolean
+ *                           description: 设备绑定状态
+ *                           example: true
+ *       404:
+ *         description: 设备未绑定或不存在
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         is_bound:
+ *                           type: boolean
+ *                           description: 设备绑定状态
+ *                           example: false
+ *       400:
+ *         description: 请求头中未提供设备SN
+ *       401:
+ *         description: 认证头缺失或格式不正确
  */
 router.get('/provisioning-info', async (req, res, next) => {
     try {

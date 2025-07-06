@@ -5,7 +5,69 @@ import authorize from "../auth/authUtils.js"; // 您的授权中间件
 
 const router = express.Router();
 
-// 获取个人信息接口
+/**
+ * @swagger
+ * /api/user/info:
+ *   get:
+ *     summary: 获取个人信息
+ *     description: 获取当前登录用户的详细信息，包括基本资料和角色权限
+ *     tags: [用户管理]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/deviceType'
+ *     responses:
+ *       200:
+ *         description: 获取用户信息成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: integer
+ *                           description: 用户ID
+ *                         username:
+ *                           type: string
+ *                           description: 用户名
+ *                         email:
+ *                           type: string
+ *                           description: 邮箱地址
+ *                         phone_number:
+ *                           type: string
+ *                           description: 手机号码
+ *                         avatar_url:
+ *                           type: string
+ *                           description: 头像URL
+ *                         gender:
+ *                           type: string
+ *                           description: 性别
+ *                         status:
+ *                           type: integer
+ *                           description: 账户状态
+ *                         last_login_time:
+ *                           type: string
+ *                           format: date-time
+ *                           description: 最后登录时间
+ *                         create_time:
+ *                           type: string
+ *                           format: date-time
+ *                           description: 创建时间
+ *                         role:
+ *                           type: integer
+ *                           description: 用户角色 (0:无权限 1:普通用户 2:管理员 3:超级管理员)
+ *       401:
+ *         description: 未授权访问
+ *       404:
+ *         description: 用户不存在
+ *       500:
+ *         description: 服务器内部错误
+ */
 router.get("/info", authorize(), async (req, res) => {
   try {
     const userId = req.user.id;
@@ -66,9 +128,44 @@ router.get("/info", authorize(), async (req, res) => {
   }
 });
 
-// 四级权限测试接口
-
-// 1. 无权限测试接口 (role: 0)
+/**
+ * @swagger
+ * /api/user/test/no-permission:
+ *   get:
+ *     summary: 无权限用户测试接口
+ *     description: 仅允许角色为0（无权限）的用户访问的测试接口
+ *     tags: [权限测试]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: 访问成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         userRole:
+ *                           type: integer
+ *                           description: 当前用户角色
+ *                         requiredRoles:
+ *                           type: array
+ *                           items:
+ *                             type: integer
+ *                           description: 所需角色权限
+ *                         description:
+ *                           type: string
+ *                           description: 接口说明
+ *       401:
+ *         description: 未授权访问
+ *       403:
+ *         description: 权限不足
+ */
 router.get("/test/no-permission", authorize([0]), async (req, res) => {
   res.json({
     code: 200,

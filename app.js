@@ -22,6 +22,7 @@ import eventRouter from './modle/guardian/eventRoute.js';
 import alertRouter from './modle/guardian/alertRoute.js';
 import smartHomeDeviceRouter from "./modle/guardian/smartHomeDeviceRoute.js";
 import actionRuleRouter from "./modle/guardian/actionRuleRoute.js";
+import { specs, swaggerUi } from './config/swagger.js';
 
 // 2. 导入并初始化 WebSocket 服务
 import { initWebSocket } from "./config/websockets.js";
@@ -44,6 +45,20 @@ app.use('/api/guardian/events', eventRouter); // 3. 使用事件路由
 app.use('/api/guardian/alerts', alertRouter); // 4. 使用告警路由
 app.use("/api/guardian", smartHomeDeviceRouter);
 app.use("/api/guardian", actionRuleRouter);
+
+// Swagger API 文档
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(specs, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'Guardian API 文档',
+  swaggerOptions: {
+    persistAuthorization: true,
+    displayRequestDuration: true,
+    docExpansion: 'none',
+    filter: true,
+    showExtensions: true,
+    showCommonExtensions: true
+  }
+}));
 // 根路径响应
 app.get("/", (req, res) => {
   res.json({

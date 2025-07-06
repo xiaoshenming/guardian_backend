@@ -8,11 +8,51 @@ import memberUtil from './memberUtil.js';
 const router = express.Router();
 
 /**
- * @api {POST} /api/guardian/circle - 创建守护圈
- * @description 用户创建一个新的守护圈，创建后自动成为该圈的圈主。
- * @permission 普通用户(1), 管理员(2)
- * @body {string} circle_name - 守护圈名称 (必填)
- * @body {string} [description] - 守护圈描述 (选填)
+ * @swagger
+ * /api/guardian/circle:
+ *   post:
+ *     summary: 创建守护圈
+ *     description: 用户创建一个新的守护圈，创建后自动成为该圈的圈主
+ *     tags: [守护圈管理]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/deviceType'
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - circle_name
+ *             properties:
+ *               circle_name:
+ *                 type: string
+ *                 description: 守护圈名称
+ *                 example: "我的家庭守护圈"
+ *               description:
+ *                 type: string
+ *                 description: 守护圈描述（可选）
+ *                 example: "保护家人安全的智能守护系统"
+ *     responses:
+ *       201:
+ *         description: 守护圈创建成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Circle'
+ *       400:
+ *         description: 请求参数错误
+ *       401:
+ *         description: 未授权访问
+ *       500:
+ *         description: 服务器内部错误
  */
 router.post('/', authorize([1, 2]), async (req, res, next) => {
     try {
@@ -43,13 +83,37 @@ router.post('/', authorize([1, 2]), async (req, res, next) => {
     }
 });
 
-
 /**
- * @api {GET} /api/guardian/circle - 获取守护圈列表
- * @description 根据用户角色获取守护圈列表。
- * - 普通用户(1): 只能看到自己创建的圈子。
- * - 管理员(2): 可以看到所有用户创建的圈子。
- * @permission 普通用户(1), 管理员(2)
+ * @swagger
+ * /api/guardian/circle:
+ *   get:
+ *     summary: 获取守护圈列表
+ *     description: 根据用户角色获取守护圈列表。普通用户只能看到自己创建的圈子，管理员可以看到所有圈子
+ *     tags: [守护圈管理]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/deviceType'
+ *       - $ref: '#/components/parameters/page'
+ *       - $ref: '#/components/parameters/limit'
+ *     responses:
+ *       200:
+ *         description: 获取守护圈列表成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Circle'
+ *       401:
+ *         description: 未授权访问
+ *       500:
+ *         description: 服务器内部错误
  */
 router.get('/', authorize([1, 2]), async (req, res, next) => {
     try {

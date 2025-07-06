@@ -10,14 +10,57 @@ const verifyToken = authorize([]);
 const router = express.Router();
 
 /**
- * @description 获取告警记录（根据用户角色返回不同范围的数据）
- * @route GET /api/guardian/alert
- * @param {string} [status] - 告警状态筛选: 'pending'(待处理), 'acknowledged'(已处理), 'all'(全部)
- * @param {number} [page=1] - 页码
- * @param {number} [limit=20] - 每页数量
- * @param {number} [circleId] - 圈子ID筛选（可选）
- * @access 需要登录
- * @description 普通用户：返回其所属所有圈子的告警；管理员：返回系统所有告警
+ * @swagger
+ * /api/guardian/alert:
+ *   get:
+ *     summary: 获取告警记录
+ *     description: 根据用户角色返回不同范围的告警数据。普通用户返回其所属圈子的告警，管理员返回系统所有告警
+ *     tags: [告警管理]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/deviceType'
+ *       - name: status
+ *         in: query
+ *         description: 告警状态筛选
+ *         schema:
+ *           type: string
+ *           enum: [pending, acknowledged, all]
+ *           default: all
+ *         example: pending
+ *       - $ref: '#/components/parameters/page'
+ *       - $ref: '#/components/parameters/limit'
+ *       - $ref: '#/components/parameters/circleId'
+ *     responses:
+ *       200:
+ *         description: 获取告警记录成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         alerts:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/Alert'
+ *                         total:
+ *                           type: integer
+ *                           description: 总记录数
+ *                         page:
+ *                           type: integer
+ *                           description: 当前页码
+ *                         limit:
+ *                           type: integer
+ *                           description: 每页数量
+ *       401:
+ *         description: 未授权访问
+ *       500:
+ *         description: 服务器内部错误
  */
 router.get('/', verifyToken, async (req, res) => {
     try {
@@ -63,10 +106,48 @@ router.get('/', verifyToken, async (req, res) => {
 });
 
 /**
- * @description 获取告警统计信息
- * @route GET /api/guardian/alert/stats
- * @access 需要登录
- * @description 普通用户：返回其所属圈子的统计；管理员：返回系统全局统计
+ * @swagger
+ * /api/guardian/alert/stats:
+ *   get:
+ *     summary: 获取告警统计信息
+ *     description: 根据用户角色返回告警统计数据。普通用户返回其所属圈子的统计，管理员返回系统全局统计
+ *     tags: [告警管理]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/deviceType'
+ *     responses:
+ *       200:
+ *         description: 获取告警统计成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         total:
+ *                           type: integer
+ *                           description: 总告警数
+ *                         pending:
+ *                           type: integer
+ *                           description: 待处理告警数
+ *                         acknowledged:
+ *                           type: integer
+ *                           description: 已处理告警数
+ *                         ignored:
+ *                           type: integer
+ *                           description: 已忽略告警数
+ *                         today:
+ *                           type: integer
+ *                           description: 今日新增告警数
+ *       401:
+ *         description: 未授权访问
+ *       500:
+ *         description: 服务器内部错误
  */
 router.get('/stats', verifyToken, async (req, res) => {
     try {

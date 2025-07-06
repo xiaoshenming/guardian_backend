@@ -22,7 +22,37 @@ const registerLimiter = rateLimit({
   max: 3,
   message: { code: 429, message: '注册尝试过于频繁，请稍后再试！', data: null, error: null },
 });
-// 在 authRouters.js 中添加
+/**
+ * @swagger
+ * /api/auth/codes:
+ *   get:
+ *     summary: 获取用户权限码
+ *     description: 根据用户角色返回对应的权限码列表，用于前端权限控制
+ *     tags: [认证管理]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/deviceType'
+ *     responses:
+ *       200:
+ *         description: 获取权限码成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ['AC_100100', 'AC_100110']
+ *       401:
+ *         description: 未授权访问
+ *       500:
+ *         description: 服务器内部错误
+ */
 router.get("/codes", authorize([1, 2, 3]), async (req, res) => {
   try {
     const userId = req.user.id;
@@ -60,7 +90,65 @@ router.get("/codes", authorize([1, 2, 3]), async (req, res) => {
     });
   }
 });
-// 登录接口
+
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: 用户登录
+ *     description: 支持用户名、邮箱、手机号三种方式登录，返回JWT令牌
+ *     tags: [认证管理]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - password
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: 用户名、邮箱或手机号
+ *                 example: "user@example.com"
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 description: 用户密码
+ *                 example: "123456"
+ *               deviceType:
+                 type: string
+                 enum: [web, mobile, desktop]
+                 default: web
+                 description: 设备类型，用于区分不同终端的登录会话（必需参数）
+ *     responses:
+ *       200:
+ *         description: 登录成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         token:
+ *                           type: string
+ *                           description: JWT访问令牌
+ *                         user:
+ *                           $ref: '#/components/schemas/User'
+ *       400:
+ *         description: 请求参数错误
+ *       401:
+ *         description: 用户名或密码错误
+ *       429:
+ *         description: 登录尝试过于频繁
+ *       500:
+ *         description: 服务器内部错误
+ */
 router.post("/login", loginLimiter, async (req, res) => {
   try {
     const { name, password, deviceType = "web" } = req.body;
@@ -146,7 +234,70 @@ router.post("/login", loginLimiter, async (req, res) => {
   }
 });
 
-// 注册接口
+/**
+ * @swagger
+ * /api/auth/register:
+ *   post:
+ *     summary: 用户注册
+ *     description: 新用户注册，需要邮箱验证码验证
+ *     tags: [认证管理]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - email
+ *               - password
+ *               - code
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: 用户名
+ *                 example: "张三"
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: 邮箱地址
+ *                 example: "user@example.com"
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 minLength: 6
+ *                 description: 密码，至少6位
+ *                 example: "123456"
+ *               code:
+ *                 type: string
+ *                 description: 邮箱验证码
+ *                 example: "123456"
+ *     responses:
+ *       200:
+ *         description: 注册成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         userId:
+ *                           type: integer
+ *                           description: 用户档案ID
+ *                         loginId:
+ *                           type: integer
+ *                           description: 登录账户ID
+ *       400:
+ *         description: 请求参数错误或验证码错误
+ *       429:
+ *         description: 注册尝试过于频繁
+ *       500:
+ *         description: 服务器内部错误
+ */
 router.post("/register", registerLimiter, async (req, res) => {
   try {
     const { name, email, password, code } = req.body;
