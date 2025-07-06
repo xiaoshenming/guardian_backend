@@ -408,7 +408,29 @@ router.post("/register", registerLimiter, async (req, res) => {
   }
 });
 
-// 退出登录接口
+/**
+ * @swagger
+ * /api/auth/logout:
+ *   post:
+ *     summary: 用户退出登录
+ *     description: 退出当前设备的登录状态，清除服务器端的JWT令牌
+ *     tags: [认证管理]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/deviceType'
+ *     responses:
+ *       200:
+ *         description: 退出登录成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
+ *       401:
+ *         description: 未授权访问
+ *       500:
+ *         description: 服务器内部错误
+ */
 router.post("/logout", authorize(), async (req, res) => {
   try {
     const deviceType = req.headers.devicetype || "web";
@@ -435,7 +457,53 @@ router.post("/logout", authorize(), async (req, res) => {
   }
 });
 
-// 忘记密码接口
+/**
+ * @swagger
+ * /api/auth/forget:
+ *   post:
+ *     summary: 忘记密码重置
+ *     description: 通过邮箱验证码重置用户密码
+ *     tags: [认证管理]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *               - code
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: 注册邮箱地址
+ *                 example: "user@example.com"
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 minLength: 6
+ *                 description: 新密码，至少6位
+ *                 example: "newpassword123"
+ *               code:
+ *                 type: string
+ *                 description: 邮箱验证码
+ *                 example: "123456"
+ *     responses:
+ *       200:
+ *         description: 密码重置成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
+ *       400:
+ *         description: 请求参数错误或验证码错误
+ *       404:
+ *         description: 用户不存在
+ *       500:
+ *         description: 服务器内部错误
+ */
 router.post("/forget", async (req, res) => {
   try {
     const { email, password, code } = req.body;

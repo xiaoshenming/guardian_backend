@@ -14,6 +14,8 @@ const router = express.Router();
  *     tags: [用户管理]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/deviceType'
  *     responses:
  *       200:
  *         description: 获取用户信息成功
@@ -135,6 +137,8 @@ router.get("/info", authorize(), async (req, res) => {
  *     tags: [权限测试]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/deviceType'
  *     responses:
  *       200:
  *         description: 访问成功
@@ -177,7 +181,46 @@ router.get("/test/no-permission", authorize([0]), async (req, res) => {
   });
 });
 
-// 2. 普通用户测试接口 (role: 1)
+/**
+ * @swagger
+ * /api/user/test/normal-user:
+ *   get:
+ *     summary: 普通用户测试接口
+ *     description: 仅允许角色为1（普通用户）的用户访问的测试接口
+ *     tags: [权限测试]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/deviceType'
+ *     responses:
+ *       200:
+ *         description: 访问成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         userRole:
+ *                           type: integer
+ *                           description: 当前用户角色
+ *                         requiredRoles:
+ *                           type: array
+ *                           items:
+ *                             type: integer
+ *                           description: 所需角色权限
+ *                         description:
+ *                           type: string
+ *                           description: 接口说明
+ *       401:
+ *         description: 未授权访问
+ *       403:
+ *         description: 权限不足
+ */
 router.get("/test/normal-user", authorize([1]), async (req, res) => {
   res.json({
     code: 200,
@@ -191,7 +234,46 @@ router.get("/test/normal-user", authorize([1]), async (req, res) => {
   });
 });
 
-// 3. 管理员测试接口 (role: 2)
+/**
+ * @swagger
+ * /api/user/test/admin:
+ *   get:
+ *     summary: 管理员测试接口
+ *     description: 仅允许角色为2（管理员）的用户访问的测试接口
+ *     tags: [权限测试]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/deviceType'
+ *     responses:
+ *       200:
+ *         description: 访问成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         userRole:
+ *                           type: integer
+ *                           description: 当前用户角色
+ *                         requiredRoles:
+ *                           type: array
+ *                           items:
+ *                             type: integer
+ *                           description: 所需角色权限
+ *                         description:
+ *                           type: string
+ *                           description: 接口说明
+ *       401:
+ *         description: 未授权访问
+ *       403:
+ *         description: 权限不足
+ */
 router.get("/test/admin", authorize([2]), async (req, res) => {
   res.json({
     code: 200,
@@ -205,7 +287,46 @@ router.get("/test/admin", authorize([2]), async (req, res) => {
   });
 });
 
-// 4. 超级管理员测试接口 (role: 3)
+/**
+ * @swagger
+ * /api/user/test/super-admin:
+ *   get:
+ *     summary: 超级管理员测试接口
+ *     description: 仅允许角色为3（超级管理员）的用户访问的测试接口
+ *     tags: [权限测试]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/deviceType'
+ *     responses:
+ *       200:
+ *         description: 访问成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         userRole:
+ *                           type: integer
+ *                           description: 当前用户角色
+ *                         requiredRoles:
+ *                           type: array
+ *                           items:
+ *                             type: integer
+ *                           description: 所需角色权限
+ *                         description:
+ *                           type: string
+ *                           description: 接口说明
+ *       401:
+ *         description: 未授权访问
+ *       403:
+ *         description: 权限不足
+ */
 router.get("/test/super-admin", authorize([3]), async (req, res) => {
   res.json({
     code: 200,
@@ -219,7 +340,46 @@ router.get("/test/super-admin", authorize([3]), async (req, res) => {
   });
 });
 
-// 5. 多角色权限测试接口 (role: 1,2,3)
+/**
+ * @swagger
+ * /api/user/test/multi-role:
+ *   get:
+ *     summary: 多角色权限测试接口
+ *     description: 允许角色为1（普通用户）、2（管理员）、3（超级管理员）的用户访问的测试接口
+ *     tags: [权限测试]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/deviceType'
+ *     responses:
+ *       200:
+ *         description: 访问成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         userRole:
+ *                           type: integer
+ *                           description: 当前用户角色
+ *                         requiredRoles:
+ *                           type: array
+ *                           items:
+ *                             type: integer
+ *                           description: 所需角色权限
+ *                         description:
+ *                           type: string
+ *                           description: 接口说明
+ *       401:
+ *         description: 未授权访问
+ *       403:
+ *         description: 权限不足
+ */
 router.get("/test/multi-role", authorize([1, 2, 3]), async (req, res) => {
   res.json({
     code: 200,
@@ -233,7 +393,42 @@ router.get("/test/multi-role", authorize([1, 2, 3]), async (req, res) => {
   });
 });
 
-// 6. 无角色限制测试接口（任何已登录用户都可访问）
+/**
+ * @swagger
+ * /api/user/test/any-user:
+ *   get:
+ *     summary: 无角色限制测试接口
+ *     description: 允许任何已登录用户访问的测试接口，无角色限制
+ *     tags: [权限测试]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/deviceType'
+ *     responses:
+ *       200:
+ *         description: 访问成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         userRole:
+ *                           type: integer
+ *                           description: 当前用户角色
+ *                         requiredRoles:
+ *                           type: string
+ *                           description: 所需角色权限
+ *                         description:
+ *                           type: string
+ *                           description: 接口说明
+ *       401:
+ *         description: 未授权访问
+ */
 router.get("/test/any-user", authorize(), async (req, res) => {
   res.json({
     code: 200,

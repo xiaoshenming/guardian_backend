@@ -19,6 +19,7 @@ const router = express.Router();
  *     security:
  *       - bearerAuth: []
  *     parameters:
+ *       - $ref: '#/components/parameters/deviceType'
  *       - name: status
  *         in: query
  *         description: 告警状态筛选
@@ -113,6 +114,8 @@ router.get('/', verifyToken, async (req, res) => {
  *     tags: [告警管理]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/deviceType'
  *     responses:
  *       200:
  *         description: 获取告警统计成功
@@ -174,13 +177,66 @@ router.get('/stats', verifyToken, async (req, res) => {
 });
 
 /**
- * @description 获取守护圈告警记录（保留原有接口，向后兼容）
- * @route GET /api/guardian/alert/:circleId
- * @param {number} circleId - 守护圈ID
- * @param {string} [status] - 告警状态筛选: 'pending'(待处理), 'acknowledged'(已处理), 'all'(全部)
- * @param {number} [page=1] - 页码
- * @param {number} [limit=20] - 每页数量
- * @access 需要登录，且为圈内成员或管理员
+ * @swagger
+ * /api/guardian/alert/{circleId}:
+ *   get:
+ *     summary: 获取守护圈告警记录
+ *     description: 获取指定守护圈的告警记录（保留原有接口，向后兼容）。普通用户需要是圈内成员，管理员可以查看任意圈子
+ *     tags: [告警管理]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/deviceType'
+ *       - name: circleId
+ *         in: path
+ *         required: true
+ *         description: 守护圈ID
+ *         schema:
+ *           type: integer
+ *           format: int64
+ *         example: 1
+ *       - name: status
+ *         in: query
+ *         description: 告警状态筛选
+ *         schema:
+ *           type: string
+ *           enum: [pending, acknowledged, all]
+ *           default: all
+ *         example: pending
+ *       - $ref: '#/components/parameters/page'
+ *       - $ref: '#/components/parameters/limit'
+ *     responses:
+ *       200:
+ *         description: 获取告警记录成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         alerts:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/Alert'
+ *                         total:
+ *                           type: integer
+ *                           description: 总记录数
+ *                         page:
+ *                           type: integer
+ *                           description: 当前页码
+ *                         limit:
+ *                           type: integer
+ *                           description: 每页数量
+ *       401:
+ *         description: 未授权访问
+ *       403:
+ *         description: 无权限访问该守护圈的告警记录
+ *       500:
+ *         description: 服务器内部错误
  */
 router.get('/:circleId([0-9]+)', verifyToken, async (req, res) => {
     try {
@@ -227,11 +283,57 @@ router.get('/:circleId([0-9]+)', verifyToken, async (req, res) => {
 });
 
 /**
- * @description 更新告警状态
- * @route PUT /api/guardian/alert/:alertId
- * @param {number} alertId - 告警ID
- * @param {number} status - 新状态: 2(已确认), 3(已忽略)
- * @access 需要登录，且为圈内成员或管理员
+ * @swagger
+ * /api/guardian/alert/{alertId}:
+ *   put:
+ *     summary: 更新告警状态
+ *     description: 更新指定告警的状态。普通用户需要是圈内成员，管理员可以处理任意告警
+ *     tags: [告警管理]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/deviceType'
+ *       - name: alertId
+ *         in: path
+ *         required: true
+ *         description: 告警ID
+ *         schema:
+ *           type: integer
+ *           format: int64
+ *         example: 1
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - status
+ *             properties:
+ *               status:
+ *                 type: integer
+ *                 description: 新状态
+ *                 enum: [2, 3]
+ *                 example: 2
+ *             example:
+ *               status: 2
+ *     responses:
+ *       200:
+ *         description: 告警状态更新成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
+ *       400:
+ *         description: 无效的状态值或更新失败
+ *       401:
+ *         description: 未授权访问
+ *       403:
+ *         description: 无权限操作该告警记录
+ *       404:
+ *         description: 告警记录不存在
+ *       500:
+ *         description: 服务器内部错误
  */
 router.put('/:alertId', verifyToken, async (req, res) => {
     try {
@@ -305,10 +407,39 @@ router.put('/:alertId', verifyToken, async (req, res) => {
 });
 
 /**
- * @description 删除告警记录
- * @route DELETE /api/guardian/alert/:alertId
- * @param {number} alertId - 告警ID
- * @access 需要登录，且为管理员或圈内成员（只能删除自己圈子的告警）
+ * @swagger
+ * /api/guardian/alert/{alertId}:
+ *   delete:
+ *     summary: 删除告警记录
+ *     description: 删除指定的告警记录。普通用户只能删除自己圈子的告警，管理员可以删除任意告警
+ *     tags: [告警管理]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/deviceType'
+ *       - name: alertId
+ *         in: path
+ *         required: true
+ *         description: 告警ID
+ *         schema:
+ *           type: integer
+ *           format: int64
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: 告警记录删除成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
+ *       401:
+ *         description: 未授权访问
+ *       403:
+ *         description: 无权限删除该告警记录
+ *       404:
+ *         description: 告警记录不存在或删除失败
+ *       500:
+ *         description: 服务器内部错误
  */
 router.delete('/:alertId', verifyToken, async (req, res) => {
     try {

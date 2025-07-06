@@ -6,11 +6,53 @@ import circleUtil from './circleUtil.js';
 const router = express.Router();
 
 /**
- * @api {POST} /api/guardian/member/join - 通过邀请码加入守护圈
- * @description 用户输入6位邀请码加入一个守护圈。
- * @permission 任意登录用户 (role=1, 2)
- * @body {string} circle_code - 守护圈的6位邀请码 (必填)
- * @body {string} [member_alias] - 在圈内的昵称 (选填, 默认为用户自己的昵称)
+ * @swagger
+ * /api/guardian/member/join:
+ *   post:
+ *     summary: 通过邀请码加入守护圈
+ *     description: 用户输入6位邀请码加入一个守护圈
+ *     tags: [成员管理]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/deviceType'
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - circle_code
+ *             properties:
+ *               circle_code:
+ *                 type: string
+ *                 description: 守护圈的6位邀请码
+ *                 minLength: 6
+ *                 maxLength: 6
+ *                 example: "ABC123"
+ *               member_alias:
+ *                 type: string
+ *                 description: 在圈内的昵称（选填，默认为用户自己的昵称）
+ *                 example: "小明"
+ *     responses:
+ *       201:
+ *         description: 成功加入守护圈
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/Member'
+ *       400:
+ *         description: 请求参数错误
+ *       401:
+ *         description: 未授权访问
+ *       500:
+ *         description: 服务器内部错误
  */
 router.post('/join', authorize([1, 2]), async (req, res, next) => {
     try {
@@ -40,9 +82,44 @@ router.post('/join', authorize([1, 2]), async (req, res, next) => {
 
 
 /**
- * @api {GET} /api/guardian/member/:circleId - 获取守护圈成员列表
- * @description 获取指定守护圈的所有成员信息。
- * @permission 圈内成员 或 系统管理员(role=2)
+ * @swagger
+ * /api/guardian/member/{circleId}:
+ *   get:
+ *     summary: 获取守护圈成员列表
+ *     description: 获取指定守护圈的所有成员信息。需要是圈内成员或系统管理员
+ *     tags: [成员管理]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/deviceType'
+ *       - name: circleId
+ *         in: path
+ *         required: true
+ *         description: 守护圈ID
+ *         schema:
+ *           type: integer
+ *           format: int64
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: 获取成员列表成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Member'
+ *       401:
+ *         description: 未授权访问
+ *       403:
+ *         description: 权限不足，您不是该守护圈的成员
+ *       500:
+ *         description: 服务器内部错误
  */
 router.get('/:circleId', authorize([1, 2]), async (req, res, next) => {
     try {
@@ -72,9 +149,67 @@ router.get('/:circleId', authorize([1, 2]), async (req, res, next) => {
 
 
 /**
- * @api {PUT} /api/guardian/member/:circleId/:memberMapId - 更新成员信息
- * @description 更新成员的昵称或角色。
- * @permission 系统管理员(role=2) / 圈主(member_role=0) / 成员自己 (只能改昵称)
+ * @swagger
+ * /api/guardian/member/{circleId}/{memberMapId}:
+ *   put:
+ *     summary: 更新成员信息
+ *     description: 更新成员的昵称或角色。系统管理员、圈主可以修改任何人，成员只能修改自己的昵称
+ *     tags: [成员管理]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/deviceType'
+ *       - name: circleId
+ *         in: path
+ *         required: true
+ *         description: 守护圈ID
+ *         schema:
+ *           type: integer
+ *           format: int64
+ *         example: 1
+ *       - name: memberMapId
+ *         in: path
+ *         required: true
+ *         description: 成员映射ID
+ *         schema:
+ *           type: integer
+ *           format: int64
+ *         example: 1
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               member_alias:
+ *                 type: string
+ *                 description: 在圈内的昵称
+ *                 example: "小明"
+ *               member_role:
+ *                 type: integer
+ *                 description: 成员角色（0=圈主，1=普通成员）
+ *                 enum: [0, 1]
+ *                 example: 1
+ *               alert_level:
+ *                 type: integer
+ *                 description: 告警级别
+ *                 example: 1
+ *     responses:
+ *       200:
+ *         description: 成员信息更新成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
+ *       401:
+ *         description: 未授权访问
+ *       403:
+ *         description: 权限不足，无法修改该成员信息
+ *       404:
+ *         description: 在当前守护圈中未找到该成员
+ *       500:
+ *         description: 服务器内部错误
  */
 router.put('/:circleId/:memberMapId', authorize([1, 2]), async (req, res, next) => {
     try {
@@ -124,10 +259,49 @@ router.put('/:circleId/:memberMapId', authorize([1, 2]), async (req, res, next) 
 
 
 /**
- * @api {DELETE} /api/guardian/member/:circleId/:memberMapId - 移出或离开守护圈
- * @description 圈主移除成员，或成员自己离开圈子。
- * @permission 系统管理员(role=2) / 圈主(member_role=0) / 成员自己
- * @businessrule 圈子的创建者不能被移除或离开，必须通过删除守护圈接口。
+ * @swagger
+ * /api/guardian/member/{circleId}/{memberMapId}:
+ *   delete:
+ *     summary: 移出或离开守护圈
+ *     description: 圈主移除成员，或成员自己离开圈子。圈子的创建者不能被移除或离开，必须通过删除守护圈接口
+ *     tags: [成员管理]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/deviceType'
+ *       - name: circleId
+ *         in: path
+ *         required: true
+ *         description: 守护圈ID
+ *         schema:
+ *           type: integer
+ *           format: int64
+ *         example: 1
+ *       - name: memberMapId
+ *         in: path
+ *         required: true
+ *         description: 成员映射ID
+ *         schema:
+ *           type: integer
+ *           format: int64
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: 操作成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
+ *       400:
+ *         description: 圈主不能被移除或离开，请通过"删除守护圈"功能来解散
+ *       401:
+ *         description: 未授权访问
+ *       403:
+ *         description: 权限不足，无法移除该成员
+ *       404:
+ *         description: 在当前守护圈中未找到该成员
+ *       500:
+ *         description: 服务器内部错误
  */
 router.delete('/:circleId/:memberMapId', authorize([1, 2]), async (req, res, next) => {
     try {

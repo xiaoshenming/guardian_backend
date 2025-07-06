@@ -14,6 +14,8 @@ const router = express.Router();
  *     tags: [设备管理]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/deviceType'
  *     requestBody:
  *       required: true
  *       content:
@@ -101,11 +103,55 @@ router.post('/bind', authorize([1, 2]), async (req, res, next) => {
 
 
 /**
- * @api {PUT} /api/guardian/device/:deviceId - 更新设备信息
- * @description 更新一个已绑定设备的名称或配置。
- * @permission 圈主 / 最初绑定者 / 系统管理员
- * @body {string} [device_name] - 新的设备名称
- * @body {object} [config] - 新的设备配置 (JSON)
+ * @swagger
+ * /api/guardian/device/{deviceId}:
+ *   put:
+ *     summary: 更新设备信息
+ *     description: 更新一个已绑定设备的名称或配置，需要是圈主、设备绑定者或系统管理员
+ *     tags: [设备管理]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/deviceType'
+ *       - name: deviceId
+ *         in: path
+ *         required: true
+ *         description: 设备ID
+ *         schema:
+ *           type: integer
+ *           example: 1
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               device_name:
+ *                 type: string
+ *                 description: 新的设备名称
+ *                 example: "客厅摄像头-更新"
+ *               config:
+ *                 type: object
+ *                 description: 新的设备配置
+ *                 example: {"resolution": "4K", "fps": 60}
+ *     responses:
+ *       200:
+ *         description: 设备信息更新成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
+ *       400:
+ *         description: 请求参数错误
+ *       401:
+ *         description: 未授权访问
+ *       403:
+ *         description: 权限不足
+ *       404:
+ *         description: 设备不存在
+ *       500:
+ *         description: 服务器内部错误
  */
 router.put('/:deviceId', authorize([1, 2]), async (req, res, next) => {
     try {
@@ -135,9 +181,38 @@ router.put('/:deviceId', authorize([1, 2]), async (req, res, next) => {
 
 
 /**
- * @api {DELETE} /api/guardian/device/:deviceId - 解绑设备
- * @description 从守护圈解绑一个设备 (软删除)。
- * @permission 圈主 / 系统管理员
+ * @swagger
+ * /api/guardian/device/{deviceId}:
+ *   delete:
+ *     summary: 解绑设备
+ *     description: 从守护圈解绑一个设备（软删除），需要是圈主或系统管理员
+ *     tags: [设备管理]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/deviceType'
+ *       - name: deviceId
+ *         in: path
+ *         required: true
+ *         description: 设备ID
+ *         schema:
+ *           type: integer
+ *           example: 1
+ *     responses:
+ *       200:
+ *         description: 设备解绑成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
+ *       401:
+ *         description: 未授权访问
+ *       403:
+ *         description: 权限不足，只有圈主可以解绑设备
+ *       404:
+ *         description: 设备不存在或未绑定
+ *       500:
+ *         description: 服务器内部错误
  */
 router.delete('/:deviceId', authorize([1, 2]), async (req, res, next) => {
     try {
