@@ -61,10 +61,10 @@ async function findDevicesByCircleId(circleId) {
         SELECT 
             d.id, d.device_sn, d.device_name, d.device_model, 
             d.device_status, d.firmware_version, d.last_heartbeat,
-            d.bound_by_uid, up.username AS bound_by_username,
+            d.bound_by_uid, lv.login_name AS bound_by_username,
             d.create_time
         FROM device_info AS d
-        LEFT JOIN user_profile AS up ON d.bound_by_uid = up.id
+        LEFT JOIN login_verification AS lv ON d.bound_by_uid = lv.id
         WHERE d.circle_id = ?
         ORDER BY d.create_time DESC
     `;
