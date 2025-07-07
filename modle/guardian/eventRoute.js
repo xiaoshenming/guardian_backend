@@ -3,6 +3,7 @@ import express from 'express';
 import authorize from '../auth/authUtils.js';
 import eventUtil from './eventUtil.js';
 import memberUtil from './memberUtil.js';
+import circleUtil from './circleUtil.js';
 
 const router = express.Router();
 
@@ -16,11 +17,22 @@ router.get('/circle/:circleId', authorize([1, 2]), async (req, res, next) => {
         const { id: userId, role } = req.user;
         const { page = 1, limit = 20 } = req.query;
 
-        // 权限验证：管理员直接通过，普通用户必须是圈内成员
+        // 权限验证：管理员直接通过，普通用户必须是圈内成员或圈子创建者
         if (role < 2) {
-            const membership = await memberUtil.getMembership(userId, circleId);
-            if (!membership) {
-                return res.status(403).json({ code: 403, message: '权限不足，您不是该守护圈的成员', data: null });
+            // 首先检查是否是圈子创建者
+            const circle = await circleUtil.findCircleById(circleId);
+            if (!circle) {
+                return res.status(404).json({ code: 404, message: '守护圈不存在', data: null, error: null });
+            }
+            
+            const isCreator = circle.creator_uid === req.user.uid;
+            
+            // 如果不是创建者，再检查是否是圈内成员
+            if (!isCreator) {
+                const membership = await memberUtil.getMembership(userId, circleId);
+                if (!membership) {
+                    return res.status(403).json({ code: 403, message: '权限不足，您不是该守护圈的成员', data: null, error: null });
+                }
             }
         }
 
