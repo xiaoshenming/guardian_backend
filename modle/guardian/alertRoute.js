@@ -247,14 +247,31 @@ router.get('/:circleId([0-9]+)', verifyToken, async (req, res) => {
 
         // 管理员可以查看任意圈子，普通用户需要验证权限
         if (userRole < 2) {
-            const member = await memberUtil.findMemberByUserAndCircle(userId, circleId);
-            if (!member) {
-                return res.status(403).json({
-                    code: 403,
-                    message: '无权限访问该守护圈的告警记录',
+            // 首先检查是否是圈子创建者
+            const circleUtil = await import('./circleUtil.js').then(m => m.default);
+            const circle = await circleUtil.findCircleById(circleId);
+            if (!circle) {
+                return res.status(404).json({
+                    code: 404,
+                    message: '守护圈不存在',
                     data: null,
                     error: null
                 });
+            }
+            
+            const isCreator = circle.creator_uid === req.user.uid;
+            
+            // 如果不是创建者，再检查是否是圈内成员
+            if (!isCreator) {
+                const member = await memberUtil.getMembership(req.user.uid, circleId);
+                if (!member) {
+                    return res.status(403).json({
+                        code: 403,
+                        message: '无权限访问该守护圈的告警记录',
+                        data: null,
+                        error: null
+                    });
+                }
             }
         }
 
@@ -365,14 +382,31 @@ router.put('/:alertId', verifyToken, async (req, res) => {
 
         // 管理员可以处理任意告警，普通用户需要验证权限
         if (userRole < 2) {
-            const member = await memberUtil.findMemberByUserAndCircle(userId, alert.circle_id);
-            if (!member) {
-                return res.status(403).json({
-                    code: 403,
-                    message: '无权限操作该告警记录',
+            // 首先检查是否是圈子创建者
+            const circleUtil = await import('./circleUtil.js').then(m => m.default);
+            const circle = await circleUtil.findCircleById(alert.circle_id);
+            if (!circle) {
+                return res.status(404).json({
+                    code: 404,
+                    message: '守护圈不存在',
                     data: null,
                     error: null
                 });
+            }
+            
+            const isCreator = circle.creator_uid === req.user.uid;
+            
+            // 如果不是创建者，再检查是否是圈内成员
+            if (!isCreator) {
+                const member = await memberUtil.getMembership(req.user.uid, alert.circle_id);
+                if (!member) {
+                    return res.status(403).json({
+                        code: 403,
+                        message: '无权限操作该告警记录',
+                        data: null,
+                        error: null
+                    });
+                }
             }
         }
 
@@ -460,14 +494,31 @@ router.delete('/:alertId', verifyToken, async (req, res) => {
 
         // 管理员可以删除任意告警，普通用户需要验证权限
         if (userRole < 2) {
-            const member = await memberUtil.findMemberByUserAndCircle(userId, alert.circle_id);
-            if (!member) {
-                return res.status(403).json({
-                    code: 403,
-                    message: '无权限删除该告警记录',
+            // 首先检查是否是圈子创建者
+            const circleUtil = await import('./circleUtil.js').then(m => m.default);
+            const circle = await circleUtil.findCircleById(alert.circle_id);
+            if (!circle) {
+                return res.status(404).json({
+                    code: 404,
+                    message: '守护圈不存在',
                     data: null,
                     error: null
                 });
+            }
+            
+            const isCreator = circle.creator_uid === req.user.uid;
+            
+            // 如果不是创建者，再检查是否是圈内成员
+            if (!isCreator) {
+                const member = await memberUtil.getMembership(req.user.uid, alert.circle_id);
+                if (!member) {
+                    return res.status(403).json({
+                        code: 403,
+                        message: '无权限删除该告警记录',
+                        data: null,
+                        error: null
+                    });
+                }
             }
         }
 

@@ -77,11 +77,23 @@ router.post('/bind', authorize([1, 2]), async (req, res, next) => {
             return res.status(400).json({ code: 400, message: '设备SN、守护圈ID和设备名称为必填项', data: null, error: null });
         }
 
-        // 权限验证：必须是圈内成员才能绑定设备
+        // 权限验证：必须是圈内成员、圈子创建者或系统管理员才能绑定设备
         if (role < 2) {
-            const membership = await memberUtil.getMembership(userId, circle_id);
-            if (!membership) {
-                return res.status(403).json({ code: 403, message: '权限不足，您不是该守护圈的成员', data: null, error: null });
+            // 首先检查是否是圈子创建者
+            const circleUtil = await import('./circleUtil.js').then(m => m.default);
+            const circle = await circleUtil.findCircleById(circle_id);
+            if (!circle) {
+                return res.status(404).json({ code: 404, message: '守护圈不存在', data: null, error: null });
+            }
+            
+            const isCreator = circle.creator_uid === req.user.uid;
+            
+            // 如果不是创建者，再检查是否是圈内成员
+            if (!isCreator) {
+                const membership = await memberUtil.getMembership(userId, circle_id);
+                if (!membership) {
+                    return res.status(403).json({ code: 403, message: '权限不足，您不是该守护圈的成员', data: null, error: null });
+                }
             }
         }
 

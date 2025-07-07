@@ -126,11 +126,22 @@ router.get('/:circleId', authorize([1, 2]), async (req, res, next) => {
         const { circleId } = req.params;
         const { id: requestingUserId, role: requestingUserRole } = req.user;
 
-        // 权限检查：必须是圈内成员或系统管理员
+        // 权限检查：必须是圈内成员、圈子创建者或系统管理员
         if (requestingUserRole < 2) {
-            const membership = await memberUtil.getMembership(requestingUserId, circleId);
-            if (!membership) {
-                return res.status(403).json({ code: 403, message: '权限不足，您不是该守护圈的成员', data: null, error: null });
+            // 首先检查是否是圈子创建者
+            const circle = await circleUtil.findCircleById(circleId);
+            if (!circle) {
+                return res.status(404).json({ code: 404, message: '守护圈不存在', data: null, error: null });
+            }
+            
+            const isCreator = circle.creator_uid === req.user.uid;
+            
+            // 如果不是创建者，再检查是否是圈内成员
+            if (!isCreator) {
+                const membership = await memberUtil.getMembership(requestingUserId, circleId);
+                if (!membership) {
+                    return res.status(403).json({ code: 403, message: '权限不足，您不是该守护圈的成员', data: null, error: null });
+                }
             }
         }
 
@@ -228,18 +239,24 @@ router.put('/:circleId/:memberMapId', authorize([1, 2]), async (req, res, next) 
         if (requestingUserRole >= 2) { // 系统管理员有权操作
             canUpdate = true;
         } else {
-            const requestingUserMembership = await memberUtil.getMembership(requestingUserId, circleId);
-            if (requestingUserMembership) {
-                // a. 圈主(member_role=0)可以修改任何人
-                if (requestingUserMembership.member_role === 0) {
-                    canUpdate = true;
-                }
-                // b. 用户只能修改自己的昵称和告警级别，不能修改自己的角色
-                if (targetMember.uid === requestingUserId) {
-                    if(member_role !== undefined && member_role !== targetMember.member_role) {
-                        return res.status(403).json({ code: 403, message: '不能修改自己的角色', data: null, error: null });
+            // 首先检查是否是圈子创建者
+            const circle = await circleUtil.findCircleById(circleId);
+            if (circle && circle.creator_uid === req.user.uid) {
+                canUpdate = true;
+            } else {
+                const requestingUserMembership = await memberUtil.getMembership(requestingUserId, circleId);
+                if (requestingUserMembership) {
+                    // a. 圈主(member_role=0)可以修改任何人
+                    if (requestingUserMembership.member_role === 0) {
+                        canUpdate = true;
                     }
-                    canUpdate = true;
+                    // b. 用户只能修改自己的昵称和告警级别，不能修改自己的角色
+                    if (targetMember.uid === requestingUserId) {
+                        if(member_role !== undefined && member_role !== targetMember.member_role) {
+                            return res.status(403).json({ code: 403, message: '不能修改自己的角色', data: null, error: null });
+                        }
+                        canUpdate = true;
+                    }
                 }
             }
         }
@@ -328,10 +345,16 @@ router.delete('/:circleId/:memberMapId', authorize([1, 2]), async (req, res, nex
             if (targetMember.uid === requestingUserId) {
                 canDelete = true;
             } else {
-                // 圈主可以移除别人
-                const requestingUserMembership = await memberUtil.getMembership(requestingUserId, circleId);
-                if (requestingUserMembership && requestingUserMembership.member_role === 0) {
+                // 首先检查是否是圈子创建者
+                const circle = await circleUtil.findCircleById(circleId);
+                if (circle && circle.creator_uid === req.user.uid) {
                     canDelete = true;
+                } else {
+                    // 圈主可以移除别人
+                    const requestingUserMembership = await memberUtil.getMembership(requestingUserId, circleId);
+                    if (requestingUserMembership && requestingUserMembership.member_role === 0) {
+                        canDelete = true;
+                    }
                 }
             }
         }

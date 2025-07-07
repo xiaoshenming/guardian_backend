@@ -387,13 +387,24 @@ router.delete('/:id', authorize([1, 2]), async (req, res, next) => {
 router.get('/:circleId/devices', authorize([1, 2]), async (req, res, next) => {
     try {
         const { circleId } = req.params;
-        const { id: userId, role } = req.user;
+        const { uid: userId, role } = req.user;
 
-        // 权限验证：必须是圈内成员或管理员
+        // 权限验证：必须是圈内成员、圈子创建者或管理员
         if (role < 2) {
-            const membership = await memberUtil.getMembership(userId, circleId);
-            if (!membership) {
-                return res.status(403).json({ code: 403, message: '权限不足，您不是该守护圈的成员', data: null, error: null });
+            // 首先检查是否是圈子创建者
+            const circle = await circleUtil.findCircleById(circleId);
+            if (!circle) {
+                return res.status(404).json({ code: 404, message: '守护圈不存在', data: null, error: null });
+            }
+            
+            const isCreator = circle.creator_uid === userId;
+            
+            // 如果不是创建者，再检查是否是圈内成员
+            if (!isCreator) {
+                const membership = await memberUtil.getMembership(userId, circleId);
+                if (!membership) {
+                    return res.status(403).json({ code: 403, message: '权限不足，您不是该守护圈的成员', data: null, error: null });
+                }
             }
         }
 
