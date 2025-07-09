@@ -105,7 +105,7 @@ class MockDataGenerator {
             const response = await axios.post(`${this.baseURL}/api/auth/login`, {
                 name: username,
                 password: password,
-                deviceType: 'web'
+                deviceType: 'test'
             });
             
             console.log(`🔍 登录响应:`, JSON.stringify(response.data, null, 2));
@@ -152,7 +152,7 @@ class MockDataGenerator {
             const response = await axios.post(`${this.baseURL}/api/guardian/circle`, circleData, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
-                    'deviceType': 'web',
+                    'deviceType': 'test',
                     'Content-Type': 'application/json'
                 }
             });
