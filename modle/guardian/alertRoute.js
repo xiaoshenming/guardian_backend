@@ -65,7 +65,7 @@ const router = express.Router();
 router.get('/', verifyToken, async (req, res) => {
     try {
         const { status = 'all', page = 1, limit = 20, circleId } = req.query;
-        const userId = req.user.id;
+        const userId = req.user.uid; // 使用 user_profile 的 id (uid)
         const userRole = req.user.role; // 假设token中包含用户角色信息
 
         let result;
@@ -151,7 +151,7 @@ router.get('/', verifyToken, async (req, res) => {
  */
 router.get('/stats', verifyToken, async (req, res) => {
     try {
-        const userId = req.user.id;
+        const userId = req.user.uid;
         const userRole = req.user.role;
 
         // 管理员获取全局统计，普通用户获取个人相关统计
@@ -259,11 +259,11 @@ router.get('/:circleId([0-9]+)', verifyToken, async (req, res) => {
                 });
             }
             
-            const isCreator = circle.creator_uid === req.user.uid;
+            const isCreator = circle.creator_uid === userId;
             
             // 如果不是创建者，再检查是否是圈内成员
             if (!isCreator) {
-                const member = await memberUtil.getMembership(req.user.uid, circleId);
+                const member = await memberUtil.getMembership(userId, circleId);
                 if (!member) {
                     return res.status(403).json({
                         code: 403,
@@ -356,7 +356,7 @@ router.put('/:alertId', verifyToken, async (req, res) => {
     try {
         const { alertId } = req.params;
         const { status } = req.body;
-        const userId = req.user.id;
+        const userId = req.user.uid; // 统一使用 uid
         const userRole = req.user.role;
 
         // 验证状态值
@@ -394,11 +394,11 @@ router.put('/:alertId', verifyToken, async (req, res) => {
                 });
             }
             
-            const isCreator = circle.creator_uid === req.user.uid;
+            const isCreator = circle.creator_uid === userId;
             
             // 如果不是创建者，再检查是否是圈内成员
             if (!isCreator) {
-                const member = await memberUtil.getMembership(req.user.uid, alert.circle_id);
+                const member = await memberUtil.getMembership(userId, alert.circle_id);
                 if (!member) {
                     return res.status(403).json({
                         code: 403,

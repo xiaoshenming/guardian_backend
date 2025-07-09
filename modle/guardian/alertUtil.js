@@ -76,7 +76,7 @@ async function findAlertById(alertId) {
  * @param {number} newStatus - 新的状态 (2:已确认, 3:已忽略)
  * @returns {Promise<boolean>}
  */
-async function updateAlertStatus(alertId, userId, newStatus) {
+async function updateAlertStatus(alertId, newStatus, userId) {
     const query = `
         UPDATE alert_log 
         SET status = ?, acknowledged_by_uid = ?, acknowledged_time = NOW()
