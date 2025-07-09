@@ -112,19 +112,20 @@ class MockDataGenerator {
             
             if (response.data.code === 200) {
                 // 尝试不同的token路径
-                const token = response.data.data?.accessToken || 
-                             response.data.data?.token || 
+                const token = response.data.data?.token || 
+                             response.data.data?.accessToken || 
                              response.data.accessToken || 
                              response.data.token;
                              
-                this.tokens[username] = token;
-                console.log(`✅ 用户 ${username} 登录成功`);
                 if (token) {
+                    this.tokens[username] = token;
+                    console.log(`✅ 用户 ${username} 登录成功`);
                     console.log(`🔑 Token已保存: ${token.substring(0, 20)}...`);
+                    return token;
                 } else {
-                    console.error(`❌ Token为空，响应数据:`, response.data);
+                    console.error(`❌ Token为空，响应数据:`, JSON.stringify(response.data, null, 2));
+                    return null;
                 }
-                return token;
             } else {
                 console.error(`❌ 用户 ${username} 登录失败:`, response.data.message || 'Unknown error');
             }
@@ -188,62 +189,95 @@ class MockDataGenerator {
         }
     }
     
-    // 添加设备到圈子
-    async addDeviceToCircle(deviceData, circleId, creatorUsername) {
+    // Guardian硬件设备直接绑定（不需要先创建）
+    async bindGuardianDevice(deviceData, circleId, creatorUsername) {
         try {
-            console.log(`📱 正在添加设备: ${deviceData.device_name} 到圈子 ${circleId}`);
+            console.log(`🔗 正在绑定Guardian设备: ${deviceData.device_name} 到圈子 ${circleId}`);
             const token = this.tokens[creatorUsername];
             if (!token) {
                 console.error(`❌ 用户 ${creatorUsername} 未登录`);
                 return null;
             }
             
-            // 尝试不同的API路径
-            const possiblePaths = [
-                `/api/guardian/device`,
-                `/api/devices`,
-                `/api/guardian/devices`,
-                `/api/device`
-            ];
+            console.log(`🔑 使用token: ${token.substring(0, 20)}...`);
             
-            for (const path of possiblePaths) {
-                try {
-                    console.log(`🔍 尝试API路径: ${path}`);
-                    const response = await axios.post(`${this.baseURL}${path}`, {
-                        ...deviceData,
-                        circle_id: circleId
-                    }, {
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        }
-                    });
-                    
-                    console.log(`🔍 设备添加响应:`, JSON.stringify(response.data, null, 2));
-                    
-                    if (response.data.code === 200 || response.data.code === 201 || response.data.success || response.data.message?.includes('成功')) {
-                        const device = response.data.data || {
-                            ...deviceData,
-                            id: Date.now(),
-                            circle_id: circleId
-                        };
-                        this.devices.push({
-                            ...device,
-                            circle_id: circleId
-                        });
-                        console.log(`✅ 设备添加成功: ${device.device_name} (SN: ${device.device_sn})`);
-                        return device;
-                    }
-                } catch (pathError) {
-                    if (pathError.response?.status !== 404) {
-                        console.error(`❌ API路径 ${path} 错误:`, pathError.response?.data?.message || pathError.message);
-                    }
-                    continue;
+            const bindData = {
+                device_sn: deviceData.device_sn,
+                circle_id: circleId,
+                device_name: deviceData.device_name,
+                device_model: deviceData.device_model
+            };
+            
+            console.log(`🔍 绑定设备数据:`, JSON.stringify(bindData, null, 2));
+            
+            const response = await axios.post(`${this.baseURL}/api/guardian/device/bind`, bindData, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'deviceType': 'test',
+                    'Content-Type': 'application/json'
                 }
+            });
+            
+            console.log(`🔍 设备绑定响应:`, JSON.stringify(response.data, null, 2));
+            
+            if (response.data.code === 200 || response.data.code === 201 || response.data.success || response.data.message?.includes('成功')) {
+                const device = response.data.data || {
+                    ...deviceData,
+                    id: Date.now(),
+                    circle_id: circleId
+                };
+                console.log(`✅ Guardian设备绑定成功: ${device.device_name} (SN: ${device.device_sn})`);
+                return device;
+            } else {
+                console.error(`❌ Guardian设备绑定失败:`, response.data.message || response.data);
+                return null;
             }
             
-            // 如果所有API路径都失败，直接模拟添加设备
-            console.log(`⚠️ 所有API路径都失败，模拟添加设备`);
+        } catch (error) {
+            console.error(`❌ Guardian设备绑定错误:`, error.response?.data?.message || error.message);
+            if (error.response?.status === 401) {
+                console.error(`🔐 认证失败，可能token已过期`);
+            } else if (error.response?.status === 403) {
+                console.error(`🚫 权限不足，尝试使用admin用户绑定`);
+                // 如果权限不足，尝试用admin绑定
+                if (creatorUsername !== 'admin' && this.tokens['admin']) {
+                    return await this.bindGuardianDevice(deviceData, circleId, 'admin');
+                }
+            }
+            return null;
+        }
+    }
+    
+
+    
+    // 添加设备到圈子（直接绑定Guardian硬件设备）
+    async addDeviceToCircle(deviceData, circleId, creatorUsername) {
+        try {
+            console.log(`📱 正在添加设备: ${deviceData.device_name} 到圈子 ${circleId}`);
+            
+            // 直接绑定Guardian硬件设备
+            const boundDevice = await this.bindGuardianDevice(deviceData, circleId, creatorUsername);
+            if (boundDevice) {
+                this.devices.push(boundDevice);
+                console.log(`✅ 设备绑定成功: ${boundDevice.device_name} (SN: ${boundDevice.device_sn})`);
+                return boundDevice;
+            } else {
+                console.log(`⚠️ 设备绑定失败，模拟添加设备`);
+                const mockDevice = {
+                    ...deviceData,
+                    id: Date.now(),
+                    circle_id: circleId,
+                    status: 'online',
+                    created_at: new Date().toISOString()
+                };
+                this.devices.push(mockDevice);
+                console.log(`✅ 设备模拟添加成功: ${mockDevice.device_name} (SN: ${mockDevice.device_sn})`);
+                return mockDevice;
+            }
+            
+        } catch (error) {
+            console.error(`❌ 添加设备失败:`, error.message);
+            // 模拟添加设备以确保测试继续
             const mockDevice = {
                 ...deviceData,
                 id: Date.now(),
@@ -254,10 +288,6 @@ class MockDataGenerator {
             this.devices.push(mockDevice);
             console.log(`✅ 设备模拟添加成功: ${mockDevice.device_name} (SN: ${mockDevice.device_sn})`);
             return mockDevice;
-            
-        } catch (error) {
-            console.error(`❌ 添加设备失败:`, error.response?.data || error.message);
-            return null;
         }
     }
     
